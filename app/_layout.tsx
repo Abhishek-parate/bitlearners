@@ -1,10 +1,11 @@
+// app/_layout.tsx
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 
 import "./global.css";
-import AuthProvider from "@/contexts/AuthProvider";
+import { AuthProvider } from "../contexts/AuthProvider";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -27,14 +28,8 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-        
-
-      <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthProvider>
-      
-
-    </>
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </AuthProvider>
   );
 }

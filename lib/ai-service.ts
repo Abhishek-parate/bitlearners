@@ -2,7 +2,7 @@
 import { Tables } from './database.types';
 
 const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
-const API_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; 'https://api.groq.com/openai/v1/chat/completions';
 
 interface AIResponse {
   success: boolean;

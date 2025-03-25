@@ -1,3 +1,4 @@
+// app/(auth)/login.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -14,8 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import icons from '@/constants/icons';
-import { supabase } from "@/utils/supabase";
+import { useAuth } from '../../hooks/useAuth';
 import * as WebBrowser from 'expo-web-browser';
 
 // Preload browser for authentication
@@ -29,7 +29,7 @@ export const useWarmUpBrowser = () => {
 };
 
 // Sample illustrations - replace with your actual assets
-const illustrationLogin = require('@/assets/images/loginscreen.png');
+const illustrationLogin = require('../../assets/images/loginscreen.png');
 
 // Handle any pending authentication sessions
 WebBrowser.maybeCompleteAuthSession();
@@ -39,12 +39,12 @@ export default function LoginScreen() {
 
     // Use expo-router for navigation
     const router = useRouter();
+    const { signIn } = useAuth();
 
     // States
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // Scroll ref for keyboard handling
@@ -84,59 +84,15 @@ export default function LoginScreen() {
 
         if (isEmailValid && isPasswordValid) {
             setLoading(true);
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-
-            if (error) {
+            try {
+                await signIn(email, password);
+                // Navigation is handled in the AuthProvider
+            } catch (error) {
                 setLoading(false);
-                Alert.alert('Login Error', error.message);
-                return;
-            }
-
-            const user = data.user;
-            if (!user) {
-                setLoading(false);
-                Alert.alert('Error', 'User not found');
-                return;
-            }
-
-            // Fetch user profile with number verification status
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('number, phone_verified')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (profileError) {
-                setLoading(false);
-                Alert.alert('Error', 'Failed to fetch user profile');
-                return;
-            }
-
-            // Handle different profile scenarios
-            if (!profile) {
-                // No profile exists - redirect to number verification
-                router.replace('/profile/(number)');
-            } else if (!profile.number || !profile.phone_verified) {
-                // Profile exists but number not verified - redirect to number verification
-                router.replace('/profile/(number)');
-
-            } else if (!profile.website || profile.website === '' || !profile.bio || profile.bio === '') {
-                // Number is verified but website or bio is empty - redirect to profile view
-                router.replace('/profile/viewprofile');
-
-                
-            } else {
-                // Profile exists and number is verified - proceed to main app
-                router.replace('/(tabs)');
+                Alert.alert('Login Error', error.message || 'Failed to sign in');
             }
         }
     };
-
-
-
 
     // Input styles based on validation state
     const getInputStyle = (error) => {
@@ -157,9 +113,6 @@ export default function LoginScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ flexGrow: 1 }}
                 >
-
-
-                    
                     {/* Purple background with illustration */}
                     <View className="h-64 bg-primary-400 px-6 pt-6 pb-4 relative">
                         <View className="items-center justify-center flex-1">
@@ -180,7 +133,7 @@ export default function LoginScreen() {
                         {/* App logo */}
                         <View className="flex-row justify-center">
                             <Image
-                                source={icons.logo}
+                                source={require('../../assets/images/icon.png')}
                                 className="w-40 h-40"
                                 resizeMode="contain"
                                 accessibilityLabel="App logo"
@@ -244,7 +197,6 @@ export default function LoginScreen() {
                         </View>
                         {passwordError ? <Text className="text-danger text-xs mb-3 ml-1 font-rubik">{passwordError}</Text> : <View className="mb-1" />}
 
-                       
                         {/* Login button with elevation */}
                         <TouchableOpacity
                             className="bg-primary-400 py-3.5 rounded-xl items-center mb-5 shadow-md"

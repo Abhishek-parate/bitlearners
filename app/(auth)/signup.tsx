@@ -1,3 +1,4 @@
+// app/(auth)/signup.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
     View, 
@@ -14,8 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import icons from '@/constants/icons';
-import { supabase } from "@/utils/supabase";
+import { useAuth } from '../../hooks/useAuth';
 import * as WebBrowser from 'expo-web-browser';
 
 // Preload browser for authentication
@@ -29,8 +29,8 @@ export const useWarmUpBrowser = () => {
 };
 
 // Sample illustrations - replace with your actual assets
-const illustrationCreate = require('@/assets/images/loginscreen.png');
-const mailConfirmation = require('@/assets/images/avatar.png');
+const illustrationCreate = require('../../assets/images/loginscreen.png');
+const mailConfirmation = require('../../assets/images/avatar.png');
 
 // Handle any pending authentication sessions
 WebBrowser.maybeCompleteAuthSession();
@@ -40,6 +40,7 @@ export default function SignupScreen() {
     
     // Use expo-router for navigation
     const router = useRouter();
+    const { signUp } = useAuth();
     
     // Core state management
     const [currentScreen, setCurrentScreen] = useState('register');
@@ -48,7 +49,7 @@ export default function SignupScreen() {
     
     // Form states
     const [email, setEmail] = useState('');
-    const [name, setName] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
     // Scroll ref for keyboard handling
@@ -57,7 +58,7 @@ export default function SignupScreen() {
     // Form validation states
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
-    const [nameError, setNameError] = useState('');
+    const [usernameError, setUsernameError] = useState('');
 
     // Validation functions
     const validateEmail = (email) => {
@@ -85,12 +86,12 @@ export default function SignupScreen() {
         return true;
     };
 
-    const validateName = (name) => {
-        if (!name) {
-            setNameError('Name is required');
+    const validateUsername = (username) => {
+        if (!username) {
+            setUsernameError('Username is required');
             return false;
         }
-        setNameError('');
+        setUsernameError('');
         return true;
     };
 
@@ -98,41 +99,18 @@ export default function SignupScreen() {
     const handleRegister = async () => {
         const isEmailValid = validateEmail(email);
         const isPasswordValid = validatePassword(password);
-        const isNameValid = validateName(name);
+        const isUsernameValid = validateUsername(username);
     
-        if (isEmailValid && isPasswordValid && isNameValid) {
+        if (isEmailValid && isPasswordValid && isUsernameValid) {
             setLoading(true);
             try {
-                console.log('Starting signup with:', { email, name }); // Debug log
-                
-                const { data, error } = await supabase.auth.signUp({
-                    email: email.trim().toLowerCase(),
-                    password: password,
-                    options: {
-                        data: {
-                            full_name: name.trim(),
-                        }
-                    }
-                });
-                
-                console.log('Signup response:', data, error);
-                
-                if (error) {
-                    console.error('Detailed error:', error);
-                    throw error;
-                }
-    
-                if (!data?.session) {
-                    setCurrentScreen('confirmation');
-                } else {
-                    router.replace('/home');
-                }
-                
+                await signUp(email.trim().toLowerCase(), password, username.trim());
+                setCurrentScreen('confirmation');
             } catch (error) {
                 console.error('Signup error:', error);
                 Alert.alert(
                     'Registration Error',
-                    `Error: ${error.message}\nPlease try again or contact support.`
+                    `Error: ${error.message || 'Unknown error'}\nPlease try again or contact support.`
                 );
             } finally {
                 setLoading(false);
@@ -142,16 +120,21 @@ export default function SignupScreen() {
 
     const handleResendEmail = async () => {
         setLoading(true);
-        const { error } = await supabase.auth.resend({
-            type: 'signup',
-            email: email,
-        });
-        setLoading(false);
-        
-        if (error) {
-            Alert.alert('Resend Error', error.message);
-        } else {
+        try {
+            const { error } = await supabase.auth.resend({
+                type: 'signup',
+                email: email,
+            });
+            
+            if (error) {
+                throw error;
+            }
+            
             Alert.alert('Email Sent', 'Verification email has been resent.');
+        } catch (error) {
+            Alert.alert('Resend Error', error.message || 'Failed to resend verification email');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -192,9 +175,9 @@ export default function SignupScreen() {
                     {/* Form container with shadow */}
                     <View className="bg-white rounded-t-3xl -mt-6 flex-1 px-6 pb-10 shadow-lg">
                         {/* App logo */}
-                        <View className="flex-row justify-center ">
+                        <View className="flex-row justify-center">
                             <Image 
-                                source={icons.logo} 
+                                source={require('../../assets/images/icon.png')} 
                                 className="w-40 h-40" 
                                 resizeMode="contain"
                                 accessibilityLabel="App logo" 
@@ -226,24 +209,24 @@ export default function SignupScreen() {
                         </View>
                         {emailError ? <Text className="text-danger text-xs mb-3 ml-1 font-rubik">{emailError}</Text> : <View className="mb-3" />}
                         
-                        {/* Name input with validation */}
-                        <Text className="text-primary-400 text-sm mb-1 font-rubik-medium">Name</Text>
-                        <View className={`mb-1 border ${getInputStyle(nameError)} rounded-xl px-4 py-2 flex-row items-center bg-accent-100`}>
+                        {/* Username input with validation */}
+                        <Text className="text-primary-400 text-sm mb-1 font-rubik-medium">Username</Text>
+                        <View className={`mb-1 border ${getInputStyle(usernameError)} rounded-xl px-4 py-2 flex-row items-center bg-accent-100`}>
                             <Ionicons name="person-outline" size={18} color="#8C8E98" />
                             <TextInput
-                                placeholder="Your full name"
+                                placeholder="Your username"
                                 className="flex-1 h-12 ml-2 font-rubik"
-                                value={name}
+                                value={username}
                                 onChangeText={(text) => {
-                                    setName(text);
-                                    if (nameError) validateName(text);
+                                    setUsername(text);
+                                    if (usernameError) validateUsername(text);
                                 }}
-                                onBlur={() => validateName(name)}
-                                accessibilityLabel="Name input field"
-                                testID="name-input"
+                                onBlur={() => validateUsername(username)}
+                                accessibilityLabel="Username input field"
+                                testID="username-input"
                             />
                         </View>
-                        {nameError ? <Text className="text-danger text-xs mb-3 ml-1 font-rubik">{nameError}</Text> : <View className="mb-3" />}
+                        {usernameError ? <Text className="text-danger text-xs mb-3 ml-1 font-rubik">{usernameError}</Text> : <View className="mb-3" />}
                         
                         {/* Password input with validation */}
                         <Text className="text-primary-400 text-sm mb-1 font-rubik-medium">Password</Text>
