@@ -99,11 +99,10 @@ export default function AddIncomePage() {
       
       const incomeData = {
         amount: parseFloat(amount),
-        description: description,
-        date: date.toISOString().split('T')[0], // Format as YYYY-MM-DD
-        is_recurring: isRecurring,
-        frequency: isRecurring ? frequency : null,
-        note: note || null
+      description: description,
+      date: date.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      is_recurring: isRecurring,
+      frequency: isRecurring ? frequency : null
       };
       
       console.log('Saving income with data:', incomeData);
