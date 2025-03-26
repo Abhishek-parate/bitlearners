@@ -253,25 +253,7 @@ const HomePage = () => {
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View className="flex-row justify-around items-center bg-white py-3 border-t border-gray-100">
-        <TouchableOpacity className="items-center">
-          <Ionicons name="home" size={24} color="#0061FF" />
-          <Text className="font-rubik-medium text-primary-300 text-xs mt-1">Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="items-center">
-          <Ionicons name="stats-chart-outline" size={24} color="#8C8E98" />
-          <Text className="font-rubik text-black-100 text-xs mt-1">Stats</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="items-center">
-          <Ionicons name="wallet-outline" size={24} color="#8C8E98" />
-          <Text className="font-rubik text-black-100 text-xs mt-1">Budget</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="items-center">
-          <Ionicons name="person-outline" size={24} color="#8C8E98" />
-          <Text className="font-rubik text-black-100 text-xs mt-1">Profile</Text>
-        </TouchableOpacity>
-      </View>
+ 
     </SafeAreaView>
   );
 };

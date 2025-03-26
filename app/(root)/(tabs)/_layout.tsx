@@ -1,79 +1,57 @@
-import { Redirect, Tabs } from "expo-router";
-import { Image, ImageSourcePropType, Text, View } from "react-native";
-import icons from "@/constants/icons";
-import { useAuth } from "@/contexts/AuthProvider";
+// app/(root)/(tabs)/_layout.tsx
+import React from 'react';
+import { View, Text } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-const TabIcon = ({
-  focused,
-  icon,
-  title,
-}: {
-  focused: boolean;
-  icon: ImageSourcePropType;
-  title: string;
-}) => (
-  <View className="flex-1 mt-3 flex flex-col items-center">
-    <Image
-      source={icon}
-      style={{ tintColor: focused ? "#0061FF" : "#666876" }}
-      resizeMode="contain"
-      className="size-6"
-    />
-    <Text
-      className={`${
-        focused ? "text-primary-400 font-rubik-medium" : "text-black-200 font-rubik"
-      } text-xs w-full text-center mt-1`}
-    >
-      {title}
-    </Text>
-  </View>
-);
-
-const TabsLayout = () => {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Redirect href="/login" />;
-  }
-
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarShowLabel: false,
+        tabBarActiveTintColor: '#0061FF',
+        tabBarInactiveTintColor: '#8C8E98',
         tabBarStyle: {
-          backgroundColor: "white",
-          position: "absolute",
-          borderTopColor: "#0061FF1A",
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          minHeight: 70,
+          borderTopColor: '#F0F0F0',
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
-        headerShown: false, // This ensures the header is hidden globally for all screens
+        tabBarLabelStyle: {
+          fontFamily: 'Rubik-Medium',
+          fontSize: 12,
+        },
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.home} title="Home" />,
+          title: 'Dashboard',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Explore",
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.search} title="Explore" />,
+          title: 'Expenses',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.person} title="Profile" />,
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
         }}
       />
-      
     </Tabs>
   );
-};
-
-export default TabsLayout;
+}

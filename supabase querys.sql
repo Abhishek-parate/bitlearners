@@ -180,3 +180,46 @@ EXECUTE FUNCTION update_updated_at_column();
 -- Similar triggers for other tables...
 
 -- step2
+-- Create INSERT policy for profiles table if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'profiles' 
+        AND cmd = 'INSERT'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Users can create their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id)';
+        RAISE NOTICE 'Created INSERT policy for profiles table';
+    ELSE
+        RAISE NOTICE 'INSERT policy for profiles table already exists';
+    END IF;
+END
+$$;
+
+
+-- Create policy directly (it will error if it exists, but that's fine)
+CREATE POLICY "Users can create their own profile" 
+ON public.profiles 
+FOR INSERT 
+WITH CHECK (auth.uid() = id);
+
+
+-- Drop the insert policy if it exists and create a new one
+DROP POLICY IF EXISTS "Users can create their own profile" ON public.profiles;
+
+-- Create the insert policy
+CREATE POLICY "Users can create their own profile" 
+ON public.profiles 
+FOR INSERT 
+WITH CHECK (auth.uid() = id);
+
+
+-- step3
+-- Drop the insert policy if it exists and create a new one
+DROP POLICY IF EXISTS "Users can create their own profile" ON public.profiles;
+
+-- Create the insert policy
+CREATE POLICY "Users can create their own profile" 
+ON public.profiles 
+FOR INSERT 
+WITH CHECK (auth.uid() = id);
