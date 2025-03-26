@@ -94,7 +94,16 @@ export default function TabsLayout() {
         options={{
           title: 'Goals',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="goal" size={size} color={color} />
+            <Ionicons name="targrt" size={size} color={color} />
+          ),
+        }}
+      />
+
+<Tabs.Screen
+        name="income/index"
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -112,9 +121,17 @@ export default function TabsLayout() {
           href: null, 
         }}
       />
+      <Tabs.Screen
+        name="income/[id]"
+        options={{
+          href: null, 
+        }}
+      />
+
+
 
 <Tabs.Screen
-        name="income/index"
+        name="income/edit/[id]"
         options={{
           href: null, 
         }}

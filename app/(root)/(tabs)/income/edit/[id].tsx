@@ -100,7 +100,6 @@ export default function EditIncomePage() {
         date: date.toISOString().split('T')[0],
         is_recurring: isRecurring,
         frequency: isRecurring ? frequency : null,
-        note: note || null
       };
       
       const { error } = await supabase
