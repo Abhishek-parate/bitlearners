@@ -1,6 +1,6 @@
 // app/_layout.tsx
 import { useEffect, useState } from "react";
-import { Stack, Redirect } from "expo-router";
+import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { View, Text } from 'react-native';
@@ -64,18 +64,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <Stack screenOptions={{ headerShown: false }}>
-        {/* Define a redirect for the root route based on auth status */}
-        <Stack.Screen
-          name="index"
-          redirect={!initialSession}
-          options={{
-            headerShown: false,
-          }}
-        />
+        {/* Define routes at the root level */}
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(root)" options={{ headerShown: false }} />
       </Stack>
-      
-      {/* If no session initially, redirect to login */}
-      {!initialSession && <Redirect href="/login" />}
     </AuthProvider>
   );
 }

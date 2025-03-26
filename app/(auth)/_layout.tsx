@@ -13,7 +13,7 @@ export default function AuthLayout() {
     if (!loading && session) {
       // User is authenticated, redirect to the main app
       console.log("Auth layout detected session, redirecting to home");
-      router.replace('/');
+      router.replace('/(root)/(tabs)/'); // More specific path to home tab
     } else if (!loading) {
       console.log("No session detected, staying on auth screens");
     }

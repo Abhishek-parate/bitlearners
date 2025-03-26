@@ -78,12 +78,13 @@ const HomePage = () => {
   const displayName = user?.user_metadata?.full_name || user?.email || "Student";
 
   const handleSetBudget = () => {
-    router.push('/budget/view');
+    router.push('/(root)/budget');
   };
-
+  
   const handleSetExpense = () => {
-    router.push('/expense');
+    router.push('/(root)/expense');
   };
+  
 
   const handleSignOut = async () => {
     try {
