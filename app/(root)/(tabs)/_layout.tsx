@@ -116,7 +116,7 @@ export default function TabsLayout() {
       />
 
 <Tabs.Screen
-        name="reports/index"
+        name="reports/add"
         options={{
           href: null, 
         }}
