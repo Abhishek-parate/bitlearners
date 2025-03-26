@@ -80,7 +80,7 @@ const HomePage = () => {
   const handleSetBudget = () => {
     router.push('/(root)/budget');
   };
-  
+
   const handleSetExpense = () => {
     router.push('/(root)/expense');
   };
@@ -145,6 +145,7 @@ const HomePage = () => {
         throw budgetsError;
       }
       
+      console.log("Budgets data:", budgetsData);
       setBudgets(budgetsData || []);
       
       // Calculate total budget from active budgets
@@ -154,7 +155,9 @@ const HomePage = () => {
         (!budget.end_date || budget.end_date >= today)
       ) || [];
       
+      console.log("Active budgets:", activeBudgets);
       const totalBudget = activeBudgets.reduce((sum, budget) => sum + Number(budget.amount), 0);
+      console.log("Total budget calculated:", totalBudget);
       
       // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -165,6 +168,8 @@ const HomePage = () => {
         console.error('Error fetching categories:', categoriesError);
         throw categoriesError;
       }
+      
+      console.log("Categories data:", categoriesData);
       
       // Fetch recent expenses with categories
       const { data: expensesData, error: expensesError } = await supabase
@@ -182,21 +187,35 @@ const HomePage = () => {
         throw expensesError;
       }
       
-      setRecentExpenses(expensesData || []);
+      console.log("Recent expenses data:", expensesData);
       
-      // Calculate total spent
+      // Fix categories data structure if needed
+      const processedExpenses = expensesData?.map(expense => {
+        // Make sure category is structured correctly
+        if (expense.categories && !expense.category) {
+          expense.category = expense.categories;
+          delete expense.categories;
+        }
+        return expense;
+      }) || [];
+      
+      setRecentExpenses(processedExpenses);
+      
+      // Calculate total spent for current month
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      
       const { data: spentData, error: spentError } = await supabase
         .from('expenses')
         .select('amount')
         .eq('user_id', user?.id)
-        .gte('date', new Date(new Date().setDate(1)).toISOString().split('T')[0]) // First day of current month
-        .lte('date', new Date().toISOString().split('T')[0]); // Today
+        .gte('date', startOfMonth);
       
       if (spentError) {
         console.error('Error calculating spent amount:', spentError);
         throw spentError;
       }
       
+      console.log("Spent data:", spentData);
       const totalSpent = spentData?.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
       
       // Update budget summary
@@ -211,12 +230,26 @@ const HomePage = () => {
       
       if (categoriesData) {
         for (const category of categoriesData) {
+          // Debug log
+          console.log("Processing category:", category.name);
+          
           // Get allocation for this category from budgets
-          const totalAllocation = activeBudgets.reduce((sum, budget) => {
-            // In a real app, you'd fetch allocations from budget_allocations table
-            // For now, we'll just divide the budget evenly among categories
-            return sum + (Number(budget.amount) / categoriesData.length);
-          }, 0);
+          // First, check if there are any budget_allocations for this category
+          const { data: allocations, error: allocationsError } = await supabase
+            .from('budget_allocations')
+            .select('amount')
+            .eq('category_id', category.id)
+            .in('budget_id', activeBudgets.map(b => b.id));
+          
+          if (allocationsError) {
+            console.error('Error getting allocations:', allocationsError);
+            continue;
+          }
+          
+          // Calculate total allocation for this category
+          const totalAllocation = allocations?.reduce((sum, allocation) => sum + Number(allocation.amount), 0) || 
+            // Fallback: divide budget evenly if no allocations found
+            activeBudgets.reduce((sum, budget) => sum + (Number(budget.amount) / categoriesData.length), 0);
           
           // Get actual spending for this category
           const { data: categorySpentData, error: categorySpentError } = await supabase
@@ -224,8 +257,7 @@ const HomePage = () => {
             .select('amount')
             .eq('user_id', user?.id)
             .eq('category_id', category.id)
-            .gte('date', new Date(new Date().setDate(1)).toISOString().split('T')[0]) // First day of current month
-            .lte('date', new Date().toISOString().split('T')[0]); // Today
+            .gte('date', startOfMonth);
           
           if (categorySpentError) {
             console.error('Error calculating category spending:', categorySpentError);
@@ -249,23 +281,20 @@ const HomePage = () => {
       
       // Calculate weekly spending
       const weeklyData = [];
+      
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
-        const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
+        const dateStr = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
         
         const { data: daySpentData, error: daySpentError } = await supabase
           .from('expenses')
           .select('amount')
           .eq('user_id', user?.id)
-          .gte('date', startDate.toISOString().split('T')[0])
-          .lte('date', endDate.toISOString().split('T')[0]);
+          .eq('date', dateStr);
         
         if (daySpentError) {
-          console.error('Error calculating daily spending:', daySpentError);
+          console.error(`Error calculating spending for ${dateStr}:`, daySpentError);
           weeklyData.push(0);
           continue;
         }
@@ -274,6 +303,7 @@ const HomePage = () => {
         weeklyData.push(daySpent);
       }
       
+      console.log("Weekly spending data:", weeklyData);
       setWeeklySpending(weeklyData);
     } catch (error) {
       console.error('Error fetching data:', error);
