@@ -327,3 +327,17 @@ export const createBudgetInsight = async (insightData: any) => {
     throw error;
   }
 };
+
+// Helper for debugging
+export const clearSession = async () => {
+    try {
+      console.log('Signing out and clearing session...');
+      await supabase.auth.signOut();
+      await AsyncStorage.removeItem('supabase.auth.token');
+      console.log('Session cleared');
+      return true;
+    } catch (error) {
+      console.error('Error clearing session:', error);
+      return false;
+    }
+  };

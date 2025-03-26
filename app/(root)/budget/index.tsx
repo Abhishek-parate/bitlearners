@@ -1,310 +1,231 @@
+// app/(root)/budget/view.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  SafeAreaView, 
-  TouchableOpacity, 
-  TextInput, 
-  KeyboardAvoidingView, 
-  Platform,
+import {
+  View,
+  Text,
   ScrollView,
-  Alert
+  TouchableOpacity,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { supabase } from '@supabase/supabase-js';
-import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
+import { useAuth } from '../../../contexts/AuthProvider';
+import { supabase } from '../../../lib/supabase';
 
-const SetBudgetPage = () => {
-  const navigation = useNavigation();
-  const [totalBudget, setTotalBudget] = useState('');
-  const [allocations, setAllocations] = useState([]);
-  const [unallocated, setUnallocated] = useState(0);
-  const [period, setPeriod] = useState('monthly'); // monthly, weekly, yearly
+type Budget = {
+  id: string;
+  name: string;
+  description?: string;
+  amount: number;
+  period: string;
+  start_date: string;
+  end_date?: string;
+  ai_optimized: boolean;
+};
 
+export default function BudgetViewPage() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  
   useEffect(() => {
-    // Fetch categories and current budget allocations
-    const fetchCategoriesAndBudgets = async () => {
-      const { data: categories, error } = await supabase
-        .from('categories')
-        .select('*');
+    fetchBudgets();
+  }, []);
+  
+  const fetchBudgets = async () => {
+    try {
+      setLoading(true);
       
-      if (categories) {
-        // Fetch existing budgets for each category
-        const { data: budgets, error: budgetError } = await supabase
-          .from('budgets')
-          .select('*')
-          .eq('period', period);
-
-        const initialAllocations = categories.map(category => {
-          const existingBudget = budgets?.find(b => b.category_id === category.id);
-          return {
-            ...category,
-            budget: existingBudget?.amount || 0,
-            percentage: 0
-          };
-        });
-
-        setAllocations(initialAllocations);
-        
-        // If existing total budget, set it
-        if (budgets && budgets.length > 0) {
-          const total = budgets.reduce((sum, budget) => sum + budget.amount, 0);
-          setTotalBudget(total.toString());
-          calculatePercentages(total.toString(), initialAllocations);
-        }
-      }
-    };
-
-    fetchCategoriesAndBudgets();
-  }, [period]);
-
-  useEffect(() => {
-    // Calculate unallocated amount
-    if (totalBudget) {
-      const allocated = allocations.reduce((sum, cat) => sum + (cat.budget || 0), 0);
-      setUnallocated(parseFloat(totalBudget) - allocated);
+      const { data, error } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setBudgets(data || []);
+    } catch (error) {
+      console.error('Error fetching budgets:', error);
+      Alert.alert('Error', 'Failed to load budgets');
+    } finally {
+      setLoading(false);
     }
-  }, [totalBudget, allocations]);
-
-  const calculatePercentages = (total, allocs = allocations) => {
-    if (!total || parseFloat(total) === 0) return;
-    
-    const updatedAllocations = allocs.map(cat => ({
-      ...cat,
-      percentage: (cat.budget / parseFloat(total)) * 100
-    }));
-    
-    setAllocations(updatedAllocations);
   };
-
-  const handleTotalBudgetChange = (value) => {
-    setTotalBudget(value);
-    calculatePercentages(value);
+  
+  // Handle create new budget
+  const handleCreateBudget = () => {
+    // In a real app, this would navigate to a budget creation form
+    Alert.alert(
+      'Create Budget',
+      'This would navigate to a budget creation screen in the complete app.'
+    );
   };
-
-  const handleAllocationChange = (value, index) => {
-    const numValue = value === '' ? 0 : parseFloat(value);
-    const updatedAllocations = [...allocations];
-    updatedAllocations[index].budget = numValue;
-    setAllocations(updatedAllocations);
-    calculatePercentages(totalBudget, updatedAllocations);
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toFixed(2)}`;
   };
-
-  const handleSliderChange = (value, index) => {
-    if (!totalBudget) return;
-    
-    const totalValue = parseFloat(totalBudget);
-    const newBudget = (value / 100) * totalValue;
-    
-    const updatedAllocations = [...allocations];
-    updatedAllocations[index].budget = newBudget;
-    updatedAllocations[index].percentage = value;
-    
-    setAllocations(updatedAllocations);
+  
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
-
-  const handleSaveBudget = async () => {
-    if (!totalBudget || parseFloat(totalBudget) <= 0) {
-      Alert.alert('Invalid Budget', 'Please enter a valid total budget');
-      return;
+  
+  // Get period display text
+  const getPeriodText = (period: string) => {
+    switch (period.toLowerCase()) {
+      case 'daily':
+        return 'Per Day';
+      case 'weekly':
+        return 'Per Week';
+      case 'monthly':
+        return 'Per Month';
+      case 'yearly':
+        return 'Per Year';
+      default:
+        return period;
     }
-
-    // Delete existing budgets for this period
-    await supabase
-      .from('budgets')
-      .delete()
-      .eq('period', period);
-
-    // Insert new budgets
-    const budgetData = allocations
-      .filter(cat => cat.budget > 0)
-      .map(cat => ({
-        category_id: cat.id,
-        amount: cat.budget,
-        period: period
-      }));
-
-    const { data, error } = await supabase
-      .from('budgets')
-      .insert(budgetData);
-
-    if (error) {
-      Alert.alert('Error', 'Failed to save budget');
-      console.error(error);
-      return;
-    }
-
-    Alert.alert('Success', 'Budget saved successfully');
-    navigation.goBack();
   };
-
-  const handleGoBack = () => {
-    router.replace('/(tabs)');
+  
+  // Check if a budget is active
+  const isBudgetActive = (budget: Budget) => {
+    const today = new Date().toISOString().split('T')[0];
+    return budget.start_date <= today && (!budget.end_date || budget.end_date >= today);
   };
-
+  
   return (
     <SafeAreaView className="flex-1 bg-accent-100">
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <ScrollView className="flex-1">
-          {/* Header */}
-          <View className="px-4 py-4 flex-row items-center">
-            <TouchableOpacity onPress={() => navigation.goBack()} className="mr-4" onPress={handleGoBack}>
+      <ScrollView className="flex-1">
+        {/* Header */}
+        <View className="px-4 py-4 flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              className="mr-3"
+              onPress={() => router.back()}
+            >
               <Ionicons name="arrow-back" size={24} color="#191D31" />
             </TouchableOpacity>
-            <Text className="font-rubik-semibold text-black-300 text-xl">Set Budget</Text>
+            <Text className="font-rubik-semibold text-black-300 text-xl">Your Budgets</Text>
           </View>
-
-          {/* Period Selection */}
-          <View className="mx-4 mb-4 bg-white p-3 rounded-2xl">
-            <Text className="font-rubik text-black-100 mb-2">Budget Period</Text>
-            <View className="flex-row">
-              <TouchableOpacity 
-                className={`flex-1 py-3 rounded-xl ${period === 'weekly' ? 'bg-primary-200' : 'bg-accent-100'}`}
-                onPress={() => setPeriod('weekly')}
-              >
-                <Text className={`text-center font-rubik-medium ${period === 'weekly' ? 'text-primary-300' : 'text-black-200'}`}>Weekly</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className={`flex-1 py-3 rounded-xl ${period === 'monthly' ? 'bg-primary-200' : 'bg-accent-100'}`}
-                onPress={() => setPeriod('monthly')}
-              >
-                <Text className={`text-center font-rubik-medium ${period === 'monthly' ? 'text-primary-300' : 'text-black-200'}`}>Monthly</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className={`flex-1 py-3 rounded-xl ${period === 'yearly' ? 'bg-primary-200' : 'bg-accent-100'}`}
-                onPress={() => setPeriod('yearly')}
-              >
-                <Text className={`text-center font-rubik-medium ${period === 'yearly' ? 'text-primary-300' : 'text-black-200'}`}>Yearly</Text>
-              </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={handleCreateBudget}
+          >
+            <Ionicons name="add-circle" size={24} color="#0061FF" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Budget List */}
+        <View className="p-4">
+          {loading ? (
+            <View className="items-center justify-center py-8">
+              <ActivityIndicator size="large" color="#0061FF" />
             </View>
-          </View>
-
-          {/* Total Budget Input */}
-          <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
-            <Text className="font-rubik text-black-100 mb-2">Total Budget</Text>
-            <View className="flex-row items-center">
-              <Text className="font-rubik-medium text-black-300 text-xl mr-2">$</Text>
-              <TextInput
-                className="font-rubik-semibold text-black-300 text-3xl flex-1"
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                value={totalBudget}
-                onChangeText={handleTotalBudgetChange}
-              />
-            </View>
-          </View>
-
-          {/* Unallocated Amount */}
-          <View className="mx-4 mb-4">
-            <View className="flex-row justify-between items-center">
-              <Text className="font-rubik text-black-100">Unallocated</Text>
-              <Text 
-                className={`font-rubik-medium ${unallocated < 0 ? 'text-danger' : 'text-black-300'}`}
+          ) : budgets.length > 0 ? (
+            budgets.map((budget) => (
+              <View 
+                key={budget.id} 
+                className={`mb-4 p-4 rounded-xl ${isBudgetActive(budget) ? 'bg-white' : 'bg-gray-100'}`}
               >
-                ${unallocated.toFixed(2)}
-              </Text>
-            </View>
-            {unallocated < 0 && (
-              <Text className="font-rubik text-danger text-xs mt-1">
-                Warning: You've allocated more than your total budget
-              </Text>
-            )}
-          </View>
-
-          {/* Category Allocations */}
-          <View className="mx-4 mb-4">
-            <Text className="font-rubik-medium text-black-300 text-lg mb-2">Category Allocations</Text>
-            
-            {allocations.map((category, index) => (
-              <View key={category.id} className="bg-white p-4 rounded-2xl mb-3">
                 <View className="flex-row justify-between items-center mb-2">
                   <View className="flex-row items-center">
                     <View 
-                      className="w-8 h-8 rounded-full items-center justify-center mr-2"
-                      style={{ backgroundColor: `${category.color}20` }}
+                      className={`w-10 h-10 rounded-full items-center justify-center mr-2 ${
+                        isBudgetActive(budget) ? 'bg-primary-100' : 'bg-gray-200'
+                      }`}
                     >
-                      <Ionicons name={category.icon} size={16} color={category.color} />
+                      <Ionicons 
+                        name={budget.ai_optimized ? "analytics" : "wallet"} 
+                        size={20} 
+                        color={isBudgetActive(budget) ? "#0061FF" : "#666"} 
+                      />
                     </View>
-                    <Text className="font-rubik-medium text-black-300">{category.name}</Text>
+                    <View>
+                      <Text 
+                        className={`font-rubik-medium ${
+                          isBudgetActive(budget) ? 'text-black-300' : 'text-black-100'
+                        } text-lg`}
+                      >
+                        {budget.name}
+                      </Text>
+                      <Text 
+                        className={`font-rubik text-xs ${
+                          isBudgetActive(budget) ? 'text-black-100' : 'text-black-100 opacity-60'
+                        }`}
+                      >
+                        {budget.ai_optimized ? 'AI Optimized' : 'Manual'} • {getPeriodText(budget.period)}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-row items-center">
-                    <Text className="font-rubik text-black-300 mr-1">$</Text>
-                    <TextInput
-                      className="font-rubik text-black-300 w-16 text-right"
-                      keyboardType="decimal-pad"
-                      value={category.budget ? category.budget.toString() : ''}
-                      onChangeText={(value) => handleAllocationChange(value, index)}
-                    />
-                  </View>
-                </View>
-                
-                <View className="flex-row items-center">
-                  <Slider
-                    style={{flex: 1, height: 40}}
-                    minimumValue={0}
-                    maximumValue={100}
-                    step={1}
-                    value={category.percentage || 0}
-                    onValueChange={(value) => handleSliderChange(value, index)}
-                    minimumTrackTintColor={category.color}
-                    maximumTrackTintColor="#E0E0E0"
-                    thumbTintColor={category.color}
-                  />
-                  <Text className="font-rubik text-black-100 ml-2 w-12 text-right">
-                    {Math.round(category.percentage || 0)}%
+                  <Text 
+                    className={`font-rubik-bold ${
+                      isBudgetActive(budget) ? 'text-primary-300' : 'text-black-100'
+                    } text-lg`}
+                  >
+                    {formatCurrency(budget.amount)}
                   </Text>
                 </View>
+                
+                {budget.description && (
+                  <Text className="font-rubik text-black-100 text-sm mb-2">
+                    {budget.description}
+                  </Text>
+                )}
+                
+                <View className="flex-row justify-between items-center mt-2">
+                  <Text className="font-rubik text-black-100 text-xs">
+                    {`${formatDate(budget.start_date)}${budget.end_date ? ` - ${formatDate(budget.end_date)}` : ' (No end date)'}`}
+                  </Text>
+                  
+                  <View className="flex-row">
+                    <TouchableOpacity 
+                      className="mr-4"
+                      onPress={() => {
+                        // In a real app, this would navigate to budget edit screen
+                        Alert.alert('Edit Budget', `Would edit budget ${budget.id}`);
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={18} color="#0061FF" />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      onPress={() => {
+                        // In a real app, this would confirm deletion
+                        Alert.alert('Delete Budget', `Would delete budget ${budget.id}`);
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#F75555" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
-            ))}
-          </View>
-
-          {/* Smart Allocation */}
-          <View className="mx-4 mb-4">
-            <TouchableOpacity 
-              className="bg-white p-4 rounded-2xl flex-row items-center justify-center"
-              onPress={() => {
-                if (!totalBudget || parseFloat(totalBudget) <= 0) {
-                  Alert.alert('Set Total Budget', 'Please set a total budget first');
-                  return;
-                }
-
-                // Apply 50/30/20 rule or another smart allocation strategy
-                const total = parseFloat(totalBudget);
-                const updatedAllocations = [...allocations];
-                
-                // Simple approach: distribute evenly for now
-                const count = updatedAllocations.length;
-                updatedAllocations.forEach((cat, idx) => {
-                  cat.budget = total / count;
-                  cat.percentage = 100 / count;
-                });
-                
-                setAllocations(updatedAllocations);
-              }}
-            >
-              <Ionicons name="flash-outline" size={20} color="#0061FF" className="mr-2" />
-              <Text className="font-rubik-medium text-primary-300 ml-2">Smart Allocation</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Save Button */}
-          <View className="mx-4 mb-6">
-            <TouchableOpacity 
-              className="bg-primary-300 p-4 rounded-xl"
-              onPress={handleSaveBudget}
-            >
-              <Text className="font-rubik-medium text-white text-center">Save Budget</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            ))
+          ) : (
+            <View className="items-center justify-center py-12">
+              <Ionicons name="wallet-outline" size={64} color="#CCCCCC" />
+              <Text className="font-rubik-medium text-black-200 text-lg mt-4">No budgets yet</Text>
+              <Text className="font-rubik text-black-100 text-center mt-2 mb-6">
+                Create your first budget to start tracking your expenses
+              </Text>
+              
+              <TouchableOpacity 
+                className="bg-primary-300 py-3 px-6 rounded-xl flex-row items-center"
+                onPress={handleCreateBudget}
+              >
+                <Ionicons name="add-circle" size={20} color="white" />
+                <Text className="font-rubik-medium text-white ml-2">Create Budget</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
-};
-
-export default SetBudgetPage;
+}

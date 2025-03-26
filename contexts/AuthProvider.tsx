@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from "../lib/supabase";
 import { router } from 'expo-router';
+import { SessionManager } from '../lib/session-manager';
 
 type AuthContextType = {
   user: User | null;
@@ -33,7 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   // Load the initial session
   useEffect(() => {
@@ -41,22 +41,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const getInitialSession = async () => {
       try {
-        console.log("Initializing auth provider...");
-        const { data, error } = await supabase.auth.getSession();
+        console.log('Initializing auth session...');
         
-        if (error) {
-          throw error;
-        }
-
-        if (mounted) {
-          const sessionExists = !!data.session;
-          console.log("Session exists:", sessionExists);
+        // Check for stored session first
+        const storedSession = await SessionManager.getSession();
+        
+        if (storedSession) {
+          console.log('Found stored session, using it...');
+          if (mounted) {
+            setSession(storedSession);
+            setUser(storedSession.user);
+            if (storedSession.user) {
+              await fetchProfile(storedSession.user.id);
+            }
+          }
+        } else {
+          // No stored session, get from Supabase
+          console.log('No stored session, checking with Supabase...');
+          const { data } = await supabase.auth.getSession();
           
-          setSession(data.session);
-          setUser(data.session?.user || null);
-
-          if (data.session?.user) {
-            await fetchProfile(data.session.user.id);
+          if (mounted) {
+            setSession(data.session);
+            setUser(data.session?.user || null);
+            
+            if (data.session) {
+              // Store the new session
+              await SessionManager.storeSession(data.session);
+              
+              if (data.session.user) {
+                await fetchProfile(data.session.user.id);
+              }
+            }
           }
         }
       } catch (error) {
@@ -64,8 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } finally {
         if (mounted) {
           setLoading(false);
-          setInitialized(true);
-          console.log("Auth provider initialized");
         }
       }
     };
@@ -77,24 +90,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('Auth state changed:', event);
       
       if (mounted) {
-        // Debug logs to see what's happening
-        console.log(`Auth state: ${event}, Session:`, newSession ? "exists" : "null");
-        
         setSession(newSession);
         setUser(newSession?.user || null);
-
-        if (newSession?.user) {
-          await fetchProfile(newSession.user.id);
-        } else {
+        
+        if (newSession) {
+          // Store the updated session
+          await SessionManager.storeSession(newSession);
+          
+          if (newSession.user) {
+            await fetchProfile(newSession.user.id);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Clear session on sign out
+          await SessionManager.clearSession();
           setProfile(null);
         }
-
+        
         // Handle navigation based on auth state
         if (event === 'SIGNED_IN') {
-          console.log("Redirecting to home after sign in");
           router.replace('/');
         } else if (event === 'SIGNED_OUT') {
-          console.log("Redirecting to login after sign out");
           router.replace('/login');
         }
       }
@@ -134,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      console.log("Attempting to sign in:", email);
+      console.log('Attempting to sign in...');
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -143,9 +158,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      console.log("Sign in successful!");
-      
-      // We'll let the auth state listener handle navigation
+      // Explicitly store session
+      if (data.session) {
+        await SessionManager.storeSession(data.session);
+        console.log('Session stored after sign in');
+      }
     } catch (error: any) {
       console.error('Error signing in:', error);
       throw error;
@@ -158,7 +175,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, username: string) => {
     try {
       setLoading(true);
-      console.log("Attempting to sign up:", email);
+      console.log('Attempting to sign up...');
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -169,8 +186,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (data.user) {
         // Create a new profile
-        console.log("Creating user profile for:", data.user.id);
-        
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -182,19 +197,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (profileError) throw profileError;
         
-        console.log("Profile created successfully!");
-      }
-      
-      // Manually refresh session after signup if we have a session
-      if (data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        if (data.session.user) {
-          await fetchProfile(data.session.user.id);
+        // If we got a session, store it
+        if (data.session) {
+          await SessionManager.storeSession(data.session);
+          console.log('Session stored after sign up');
         }
-      } else {
-        // No session means email confirmation is required
-        console.log("Email confirmation required - no immediate session");
       }
     } catch (error: any) {
       console.error('Error signing up:', error);
@@ -208,14 +215,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      console.log("Attempting to sign out");
       
+      // First, clear local session
+      await SessionManager.clearSession();
+      
+      // Then, sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      console.log("Sign out successful!");
-      
-      // The onAuthStateChange listener will handle navigation
+      console.log('Successfully signed out');
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
