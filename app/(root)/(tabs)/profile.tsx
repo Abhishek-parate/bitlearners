@@ -1,110 +1,282 @@
-import {
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  SafeAreaView, 
+  TouchableOpacity, 
+  Image, 
+  ScrollView, 
+  ActivityIndicator,
   Alert,
-  Image,
-  ImageSourcePropType,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+  Switch
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useAuth } from '@/contexts/AuthProvider';
 
+// Import Supabase functions
+import { 
+  getProfile, 
+  updateProfile, 
+  clearSession, 
+  supabase 
+} from '@/lib/supabase';
 
-
-
-import icons from "@/constants/icons";
-import { settings } from "@/constants/data";
-import UserAvatar from "@/components/UserAvatar";
-import { useAuth } from "@/contexts/AuthProvider";
-import { supabase } from "@/utils/supabase";
-import { router } from "expo-router";
-
-interface SettingsItemProp {
-  icon: ImageSourcePropType;
-  title: string;
-  onPress?: () => void;
-  textStyle?: string;
-  showArrow?: boolean;
-  url:string;
-}
-
-const SettingsItem = ({
-  icon,
-  title,
-  onPress,
-  textStyle,
-  showArrow = true,
-  url,
-}: SettingsItemProp) => (
-  <TouchableOpacity
-      onPress={onPress ? onPress : () => url && router.push(url)} // Handle navigation
-      className="flex flex-row items-center justify-between py-3"
-    >
-      <View className="flex flex-row items-center gap-3">
-        <Image source={icon} className="size-6" />
-        <Text className={`text-lg font-rubik-medium text-black-300 ${textStyle}`}>
-          {title}
-        </Text>
-      </View>
-      {showArrow && <Image source={icons.rightArrow} className="size-5" />}
-    </TouchableOpacity>
-);
-
-const Profile = () => {
-
-  const { user, logout } = useAuth();
-  const displayName = user?.user_metadata?.full_name || user?.email || "User";
-
-
+export default function ProfilePage() {
+  const { user, setUser } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+  
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      
+      if (!user) {
+        console.log('No user found, redirecting to login');
+        router.replace('/(auth)/login');
+        return;
+      }
+      
+      const profileData = await getProfile();
+      
+      if (profileData) {
+        setProfile(profileData);
+      } else {
+        console.log('No profile found, profile may need to be created');
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out', 
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Sign Out',
+          onPress: async () => {
+            try {
+              await supabase.auth.signOut();
+              setUser(null);
+              // Clear any stored session data
+              await clearSession();
+              
+              // Navigate to login screen
+              router.replace('/(auth)/login');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out');
+            }
+          },
+          style: 'destructive'
+        }
+      ]
+    );
+  };
+  
+  const handleEditProfile = () => {
+    router.push('/profile/edit');
+  };
+  
+  const handleCurrencyChange = () => {
+    router.push('/profile/currency');
+  };
+  
+  const handleThemeToggle = (value) => {
+    setDarkMode(value);
+    // In a real app, you'd save this preference and apply the theme
+  };
+  
+  const handleNotificationsToggle = (value) => {
+    setNotifications(value);
+    // In a real app, you'd save this preference and manage notifications
+  };
+  
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+  
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-accent-100 justify-center items-center">
+        <ActivityIndicator size="large" color="#0061FF" />
+        <Text className="font-rubik mt-4">Loading profile...</Text>
+      </SafeAreaView>
+    );
+  }
+  
   return (
-    <SafeAreaView className="h-full bg-white">
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-32 px-7"
-      >
-        <View className="flex flex-row items-center justify-between mt-5">
-          
-        
-          <Text className="text-xl font-rubik-bold">Profile</Text>
-
-          <Image source={icons.bell} className="size-5" />
+    <SafeAreaView className="flex-1 bg-accent-100">
+      <ScrollView className="flex-1">
+        {/* Header */}
+        <View className="px-4 py-4 flex-row justify-between items-center">
+          <Text className="font-rubik-semibold text-black-300 text-xl">Profile</Text>
+          <TouchableOpacity onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={24} color="#F75555" />
+          </TouchableOpacity>
         </View>
-
-        <View className="flex flex-row justify-center mt-5">
-          <View className="flex flex-col items-center relative mt-5">
-          <UserAvatar name={displayName} />
-            <TouchableOpacity className="absolute bottom-11 right-2">
-              <Image source={icons.edit} className="size-9" />
-            </TouchableOpacity>
-            <Text className="text-2xl font-rubik-bold mt-2">{displayName}</Text>
-
-
+        
+        {/* Profile Card */}
+        <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
+          <View className="flex-row items-center">
+            {profile?.avatar_url ? (
+              <Image 
+                source={{ uri: profile.avatar_url }} 
+                className="w-20 h-20 rounded-full bg-primary-100"
+              />
+            ) : (
+              <View className="w-20 h-20 rounded-full bg-primary-100 items-center justify-center">
+                <Text className="font-rubik-bold text-primary-300 text-2xl">
+                  {getInitials(profile?.full_name || user?.email)}
+                </Text>
+              </View>
+            )}
+            
+            <View className="ml-4 flex-1">
+              <Text className="font-rubik-medium text-black-300 text-lg">
+                {profile?.full_name || 'Student'}
+              </Text>
+              <Text className="font-rubik text-black-100">
+                {user?.email}
+              </Text>
+              <TouchableOpacity 
+                className="bg-primary-100 px-3 py-1 rounded-full mt-2 self-start"
+                onPress={handleEditProfile}
+              >
+                <Text className="font-rubik-medium text-primary-300 text-sm">Edit Profile</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-
-        <View className="flex flex-col mt-10">
-          <SettingsItem icon={icons.calendar} title="My Bookings" />
-          <SettingsItem icon={icons.wallet} title="Payments" />
+        
+        {/* Financial Summary */}
+        <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
+          <Text className="font-rubik-medium text-black-300 text-lg mb-3">Financial Summary</Text>
+          
+          <View className="flex-row justify-between mb-3">
+            <View className="bg-primary-100 p-3 rounded-xl items-center w-[48%]">
+              <Text className="font-rubik text-black-100 mb-1">Monthly Budget</Text>
+              <Text className="font-rubik-bold text-primary-300 text-lg">
+                ${profile?.budget_limit?.toFixed(2) || '0.00'}
+              </Text>
+            </View>
+            
+            <View className="bg-accent-100 p-3 rounded-xl items-center w-[48%]">
+              <Text className="font-rubik text-black-100 mb-1">Savings Goal</Text>
+              <Text className="font-rubik-bold text-green-700 text-lg">{profile?.spending_goal || 'Not set'}</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            className="bg-primary-300 p-3 rounded-xl"
+            onPress={() => router.push('/reports')}
+          >
+            <Text className="font-rubik-medium text-white text-center">View Financial Reports</Text>
+          </TouchableOpacity>
         </View>
-
-        <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
-          {settings.slice(2).map((item, index) => (
-            <SettingsItem key={index} {...item} />
-          ))}
-        </View>
-
-        <View className="flex flex-col border-t mt-5 pt-5 border-primary-200">
-          <SettingsItem
-            icon={icons.logout}
-            title="Logout"
-            textStyle="text-danger"
-            showArrow={false}
-            onPress={()=> supabase.auth.signOut()}
-          />
+        
+        {/* Settings */}
+        <View className="mx-4 mb-6">
+          <Text className="font-rubik-medium text-black-300 text-lg mb-3">Settings</Text>
+          
+          <View className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <TouchableOpacity 
+              className="flex-row justify-between items-center p-4 border-b border-accent-100"
+              onPress={handleCurrencyChange}
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
+                  <Ionicons name="cash-outline" size={18} color="#0061FF" />
+                </View>
+                <Text className="font-rubik text-black-300">Currency</Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className="font-rubik text-black-100 mr-1">{profile?.currency || 'USD'}</Text>
+                <Ionicons name="chevron-forward" size={20} color="#8C8E98" />
+              </View>
+            </TouchableOpacity>
+            
+            <View className="flex-row justify-between items-center p-4 border-b border-accent-100">
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
+                  <Ionicons name="moon-outline" size={18} color="#0061FF" />
+                </View>
+                <Text className="font-rubik text-black-300">Dark Mode</Text>
+              </View>
+              <Switch
+                trackColor={{ false: "#E0E0E0", true: "#0061FF40" }}
+                thumbColor={darkMode ? "#0061FF" : "#FFFFFF"}
+                onValueChange={handleThemeToggle}
+                value={darkMode}
+              />
+            </View>
+            
+            <View className="flex-row justify-between items-center p-4 border-b border-accent-100">
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
+                  <Ionicons name="notifications-outline" size={18} color="#0061FF" />
+                </View>
+                <Text className="font-rubik text-black-300">Notifications</Text>
+              </View>
+              <Switch
+                trackColor={{ false: "#E0E0E0", true: "#0061FF40" }}
+                thumbColor={notifications ? "#0061FF" : "#FFFFFF"}
+                onValueChange={handleNotificationsToggle}
+                value={notifications}
+              />
+            </View>
+            
+            <TouchableOpacity 
+              className="flex-row justify-between items-center p-4 border-b border-accent-100"
+              onPress={() => router.push('/about')}
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
+                  <Ionicons name="information-circle-outline" size={18} color="#0061FF" />
+                </View>
+                <Text className="font-rubik text-black-300">About</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#8C8E98" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              className="flex-row justify-between items-center p-4"
+              onPress={() => router.push('/help')}
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
+                  <Ionicons name="help-circle-outline" size={18} color="#0061FF" />
+                </View>
+                <Text className="font-rubik text-black-300">Help & Support</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#8C8E98" />
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            className="mt-4 p-4 bg-white rounded-2xl flex-row items-center justify-center"
+            onPress={handleSignOut}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#F75555" />
+            <Text className="font-rubik-medium text-danger ml-2">Sign Out</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-};
-
-export default Profile;
+}

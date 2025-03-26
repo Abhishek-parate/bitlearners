@@ -10,111 +10,26 @@ import {
   Dimensions,
   Platform,
   ScrollView,
-  RefreshControl
+  RefreshControl,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import { useAuth } from '../../../contexts/AuthProvider';
+import { useAuth } from '@/contexts/AuthProvider';
 
-// Dummy data - replace with actual API calls in real implementation
-const DUMMY_TRANSACTIONS = [
-  {
-    id: '1',
-    amount: 25.99,
-    description: 'Grocery shopping',
-    category: { id: '1', name: 'Food', icon: 'fast-food-outline', color: '#0061FF' },
-    date: new Date(2025, 1, 27),
-    note: 'Weekly groceries',
-    type: 'expense'
-  },
-  {
-    id: '2',
-    amount: 12.50,
-    description: 'Uber ride',
-    category: { id: '2', name: 'Transport', icon: 'bus-outline', color: '#F75555' },
-    date: new Date(2025, 1, 26),
-    note: '',
-    type: 'expense'
-  },
-  {
-    id: '3',
-    amount: 500.00,
-    description: 'Freelance work',
-    category: { id: '7', name: 'Income', icon: 'cash-outline', color: '#4CAF50' },
-    date: new Date(2025, 1, 25),
-    note: 'Logo design project',
-    type: 'income'
-  },
-  {
-    id: '4',
-    amount: 15.99,
-    description: 'Netflix subscription',
-    category: { id: '4', name: 'Entertainment', icon: 'film-outline', color: '#FF9800' },
-    date: new Date(2025, 1, 24),
-    note: 'Monthly subscription',
-    type: 'expense'
-  },
-  {
-    id: '5',
-    amount: 950.00,
-    description: 'Monthly rent',
-    category: { id: '5', name: 'Rent', icon: 'home-outline', color: '#9C27B0' },
-    date: new Date(2025, 1, 23),
-    note: 'February rent',
-    type: 'expense'
-  },
-  {
-    id: '6',
-    amount: 34.95,
-    description: 'Programming book',
-    category: { id: '3', name: 'Books', icon: 'book-outline', color: '#4CAF50' },
-    date: new Date(2025, 1, 22),
-    note: 'React Native development',
-    type: 'expense'
-  },
-  {
-    id: '7',
-    amount: 1200.00,
-    description: 'Salary',
-    category: { id: '7', name: 'Income', icon: 'cash-outline', color: '#4CAF50' },
-    date: new Date(2025, 1, 20),
-    note: 'Monthly salary',
-    type: 'income'
-  },
-  {
-    id: '8',
-    amount: 42.50,
-    description: 'Dinner with friends',
-    category: { id: '1', name: 'Food', icon: 'fast-food-outline', color: '#0061FF' },
-    date: new Date(2025, 1, 19),
-    note: 'Italian restaurant',
-    type: 'expense'
-  },
-  {
-    id: '9',
-    amount: 18.99,
-    description: 'Phone case',
-    category: { id: '6', name: 'Others', icon: 'grid-outline', color: '#795548' },
-    date: new Date(2025, 1, 18),
-    note: '',
-    type: 'expense'
-  },
-  {
-    id: '10',
-    amount: 8.75,
-    description: 'Coffee and snack',
-    category: { id: '1', name: 'Food', icon: 'fast-food-outline', color: '#0061FF' },
-    date: new Date(2025, 1, 17),
-    note: 'Work break',
-    type: 'expense'
-  }
-];
+// Import Supabase functions
+import { 
+  getExpenses, 
+  getIncome,
+  getCategories
+} from '@/lib/supabase';
 
 export default function ExplorePage() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'expense' | 'income'>('all');
@@ -137,31 +52,98 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    fetchTransactions();
+    fetchAllData();
   }, [activeFilter, activeMonth]);
   
-  const fetchTransactions = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // First, get categories for proper display
+      const categoriesData = await getCategories();
+      console.log('Categories fetched:', categoriesData?.length || 0);
+      setCategories(categoriesData || []);
       
-      // Filter transactions based on selected month and transaction type
-      const filteredTransactions = DUMMY_TRANSACTIONS.filter(transaction => {
-        const sameMonth = transaction.date.getMonth() === activeMonth.getMonth() && 
-                          transaction.date.getFullYear() === activeMonth.getFullYear();
+      // Calculate date range for current month
+      const startDate = new Date(activeMonth.getFullYear(), activeMonth.getMonth(), 1);
+      const endDate = new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1, 0);
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
+      const filters = {
+        start_date: startDateStr,
+        end_date: endDateStr
+      };
+      
+      // Fetch expenses and income
+      const [expensesData, incomeData] = await Promise.all([
+        getExpenses(filters),
+        getIncome(filters)
+      ]);
+      
+      console.log('Expenses fetched:', expensesData?.length || 0);
+      console.log('Income fetched:', incomeData?.length || 0);
+      
+      // Convert expenses to transaction format
+      const expenseTransactions = (expensesData || []).map(expense => {
+        // Find category from our categories list
+        const category = categoriesData?.find(cat => cat.id === expense.category_id) || {
+          id: expense.category_id || 'unknown',
+          name: 'Other',
+          color: '#AAAAAA',
+          icon: 'albums'
+        };
         
-        if (activeFilter === 'all') {
-          return sameMonth;
-        } else {
-          return sameMonth && transaction.type === activeFilter;
-        }
+        return {
+          id: expense.id,
+          amount: Number(expense.amount) || 0,
+          description: expense.description || 'Unlabeled Expense',
+          category: {
+            id: category.id,
+            name: category.name,
+            icon: getCategoryIcon(category.name, category.icon),
+            color: category.color || '#0061FF'
+          },
+          date: new Date(expense.date || expense.created_at),
+          note: expense.note || '',
+          type: 'expense'
+        };
       });
       
-      setTransactions(filteredTransactions);
+      // Convert income to transaction format
+      const incomeTransactions = (incomeData || []).map(income => {
+        return {
+          id: income.id,
+          amount: Number(income.amount) || 0,
+          description: income.description || 'Income',
+          category: {
+            id: 'income',
+            name: 'Income',
+            icon: 'cash-outline',
+            color: '#4CAF50'
+          },
+          date: new Date(income.date || income.created_at),
+          note: income.note || '',
+          type: 'income'
+        };
+      });
+      
+      // Combine and sort transactions
+      let allTransactions = [...expenseTransactions, ...incomeTransactions];
+      
+      // Apply filter
+      if (activeFilter !== 'all') {
+        allTransactions = allTransactions.filter(t => t.type === activeFilter);
+      }
+      
+      // Sort by date (newest first)
+      allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+      
+      setTransactions(allTransactions);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error('Error fetching transaction data:', error);
+      Alert.alert('Error', 'Failed to load transaction data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -170,7 +152,23 @@ export default function ExplorePage() {
   
   const onRefresh = () => {
     setRefreshing(true);
-    fetchTransactions();
+    fetchAllData();
+  };
+  
+  const getCategoryIcon = (categoryName = '', defaultIcon = 'albums') => {
+    const categoryIcons = {
+      'Food': 'fast-food-outline',
+      'Transport': 'bus-outline',
+      'Housing': 'home-outline',
+      'Education': 'book-outline',
+      'Entertainment': 'film-outline',
+      'Shopping': 'cart-outline',
+      'Health': 'fitness-outline',
+      'Miscellaneous': 'albums-outline',
+      'Income': 'cash-outline'
+    };
+    
+    return categoryIcons[categoryName] || defaultIcon || 'albums-outline';
   };
   
   // Calculate summary stats
@@ -216,7 +214,12 @@ export default function ExplorePage() {
     <TouchableOpacity 
       className="flex-row items-center p-4 bg-white rounded-xl mb-2"
       onPress={() => {
-        // Navigate to transaction details
+        // View transaction details
+        if (item.type === 'expense') {
+          router.push({ pathname: '/expense/[id]', params: { id: item.id } });
+        } else {
+          router.push({ pathname: '/income/[id]', params: { id: item.id } });
+        }
       }}
     >
       <View 
@@ -296,10 +299,10 @@ export default function ExplorePage() {
           <TouchableOpacity 
             className="p-2"
             onPress={() => {
-              // Navigate to settings or filter options
+              router.push('/transaction-report');
             }}
           >
-            <Ionicons name="options-outline" size={24} color="#191D31" />
+            <Ionicons name="analytics-outline" size={24} color="#191D31" />
           </TouchableOpacity>
         </View>
 
@@ -333,7 +336,7 @@ export default function ExplorePage() {
             <Text 
               className={`font-rubik-semibold ${balance >= 0 ? 'text-green-500' : 'text-danger'}`}
             >
-              {balance >= 0 ? '' : '-'}{formatCurrency(Math.abs(balance))}
+              {formatCurrency(balance)}
             </Text>
           </View>
         </View>
@@ -393,18 +396,30 @@ export default function ExplorePage() {
             <Ionicons name="document-text-outline" size={64} color="#8C8E98" />
             <Text className="font-rubik-medium text-black-200 text-lg mt-4 mb-2">No transactions found</Text>
             <Text className="font-rubik text-black-100 text-center">
-              There are no transactions for this period. Add a new transaction to get started.
+              There are no transactions for {activeMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}.
+              {activeFilter !== 'all' ? ` Try changing the filter or adding a new ${activeFilter}.` : ' Add a new transaction to get started.'}
             </Text>
           </View>
         )}
 
-        {/* Add Transaction Button */}
-        <TouchableOpacity 
-          className="absolute bottom-6 right-6 bg-primary-300 w-14 h-14 rounded-full items-center justify-center shadow-md"
-          onPress={() => router.push('/expense')}
-        >
-          <Ionicons name="add" size={28} color="white" />
-        </TouchableOpacity>
+        {/* Add Transaction Float Buttons */}
+        <View className="absolute bottom-6 right-6 flex-row">
+          <TouchableOpacity 
+            className="bg-green-500 w-14 h-14 rounded-full items-center justify-center shadow-md mr-3"
+            onPress={() => router.push('/income/add')}
+          >
+            <Ionicons name="add" size={24} color="white" />
+            <Ionicons name="cash-outline" size={12} color="white" style={{ position: 'absolute', bottom: 10 }} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            className="bg-primary-300 w-14 h-14 rounded-full items-center justify-center shadow-md"
+            onPress={() => router.push('/(root)/(tabs)/expense')}
+          >
+            <Ionicons name="add" size={24} color="white" />
+            <Ionicons name="cart-outline" size={12} color="white" style={{ position: 'absolute', bottom: 10 }} />
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );

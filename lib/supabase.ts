@@ -20,7 +20,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Helper functions for working with Supabase
+/**
+ * Gets the current user's profile
+ */
 export const getProfile = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -41,6 +43,9 @@ export const getProfile = async () => {
   }
 };
 
+/**
+ * Updates the current user's profile
+ */
 export const updateProfile = async (updates: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -62,6 +67,9 @@ export const updateProfile = async (updates: any) => {
   }
 };
 
+/**
+ * Creates a new budget
+ */
 export const createBudget = async (budgetData: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -82,6 +90,9 @@ export const createBudget = async (budgetData: any) => {
   }
 };
 
+/**
+ * Gets all budgets for the current user
+ */
 export const getBudgets = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -95,15 +106,20 @@ export const getBudgets = async () => {
       .order('created_at', { ascending: false });
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching budgets:', error);
-    throw error;
+    return [];
   }
 };
 
-export const getBudgetDetails = async (budgetId: string) => {
+/**
+ * Gets a specific budget with its allocations and categories
+ */
+export const getBudgetDetails = async (budgetId) => {
   try {
+    console.log(`Fetching details for budget: ${budgetId}`);
+    
     const { data, error } = await supabase
       .from('budgets')
       .select(`
@@ -116,14 +132,35 @@ export const getBudgetDetails = async (budgetId: string) => {
       .eq('id', budgetId)
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Budget details error:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.error('No budget details found for ID:', budgetId);
+      return { id: budgetId, budget_allocations: [] };
+    }
+    
+    console.log(`Found budget with ${data.budget_allocations?.length || 0} allocations`);
+    
+    // Ensure allocations are properly structured
+    if (data.budget_allocations && Array.isArray(data.budget_allocations)) {
+      data.budget_allocations.forEach(alloc => {
+        console.log(`Allocation: Category=${alloc.category_id}, Amount=${alloc.amount}`);
+      });
+    }
+    
     return data;
   } catch (error) {
     console.error('Error fetching budget details:', error);
-    throw error;
+    return { id: budgetId, budget_allocations: [] };
   }
 };
 
+/**
+ * Gets all categories
+ */
 export const getCategories = async () => {
   try {
     const { data, error } = await supabase
@@ -132,13 +169,39 @@ export const getCategories = async () => {
       .order('name');
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching categories:', error);
+    return [];
+  }
+};
+
+/**
+ * Creates a budget allocation for a category
+ */
+export const createBudgetAllocation = async (budgetId: string, categoryId: string, amount: number) => {
+  try {
+    const { data, error } = await supabase
+      .from('budget_allocations')
+      .insert({
+        budget_id: budgetId,
+        category_id: categoryId,
+        amount: amount
+      })
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating budget allocation:', error);
     throw error;
   }
 };
 
+/**
+ * Adds a new expense
+ */
 export const addExpense = async (expenseData: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -159,7 +222,11 @@ export const addExpense = async (expenseData: any) => {
   }
 };
 
-export const getExpenses = async (filters = {}) => {
+/**
+ * Gets expenses with optional filters
+ * @param filters Object with filters like { category_id, start_date, end_date, limit }
+ */
+export const getExpenses = async (filters: any = {}) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -174,23 +241,48 @@ export const getExpenses = async (filters = {}) => {
       .eq('user_id', user.id)
       .order('date', { ascending: false });
     
-    // Apply any additional filters
+    // Apply specific filters
+    if (filters.category_id) {
+      query = query.eq('category_id', filters.category_id);
+    }
+    
+    if (filters.budget_id) {
+      query = query.eq('budget_id', filters.budget_id);
+    }
+    
+    if (filters.start_date) {
+      query = query.gte('date', filters.start_date);
+    }
+    
+    if (filters.end_date) {
+      query = query.lte('date', filters.end_date);
+    }
+    
+    // Apply any other filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
+      if (value && !['category_id', 'budget_id', 'start_date', 'end_date', 'limit'].includes(key)) {
         query = query.eq(key, value);
       }
     });
+    
+    // Apply limit if provided
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
       
     const { data, error } = await query;
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching expenses:', error);
-    throw error;
+    return [];
   }
 };
 
+/**
+ * Adds a new income record
+ */
 export const addIncome = async (incomeData: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -211,26 +303,48 @@ export const addIncome = async (incomeData: any) => {
   }
 };
 
-export const getIncome = async () => {
+/**
+ * Gets income records with optional filters
+ */
+export const getIncome = async (filters: any = {}) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) throw new Error('User not found');
     
-    const { data, error } = await supabase
+    let query = supabase
       .from('income')
       .select('*')
       .eq('user_id', user.id)
       .order('date', { ascending: false });
+    
+    // Apply specific filters
+    if (filters.start_date) {
+      query = query.gte('date', filters.start_date);
+    }
+    
+    if (filters.end_date) {
+      query = query.lte('date', filters.end_date);
+    }
+    
+    // Apply limit if provided
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+      
+    const { data, error } = await query;
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching income:', error);
-    throw error;
+    return [];
   }
 };
 
+/**
+ * Gets all savings goals
+ */
 export const getSavingsGoals = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -244,13 +358,16 @@ export const getSavingsGoals = async () => {
       .order('created_at', { ascending: false });
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching savings goals:', error);
-    throw error;
+    return [];
   }
 };
 
+/**
+ * Creates a new savings goal
+ */
 export const createSavingsGoal = async (goalData: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -271,6 +388,9 @@ export const createSavingsGoal = async (goalData: any) => {
   }
 };
 
+/**
+ * Updates an existing savings goal
+ */
 export const updateSavingsGoal = async (goalId: string, updates: any) => {
   try {
     const { data, error } = await supabase
@@ -288,6 +408,9 @@ export const updateSavingsGoal = async (goalId: string, updates: any) => {
   }
 };
 
+/**
+ * Gets budget insights
+ */
 export const getBudgetInsights = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -301,13 +424,16 @@ export const getBudgetInsights = async () => {
       .order('created_at', { ascending: false });
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching budget insights:', error);
-    throw error;
+    return [];
   }
 };
 
+/**
+ * Creates a budget insight
+ */
 export const createBudgetInsight = async (insightData: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -328,16 +454,153 @@ export const createBudgetInsight = async (insightData: any) => {
   }
 };
 
-// Helper for debugging
+/**
+ * Helper for creating a category
+ */
+export const createCategory = async (categoryData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert(categoryData)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating category:', error);
+    throw error;
+  }
+};
+
+/**
+ * Helper for debugging - clears session
+ */
 export const clearSession = async () => {
-    try {
-      console.log('Signing out and clearing session...');
-      await supabase.auth.signOut();
-      await AsyncStorage.removeItem('supabase.auth.token');
-      console.log('Session cleared');
-      return true;
-    } catch (error) {
-      console.error('Error clearing session:', error);
-      return false;
+  try {
+    console.log('Signing out and clearing session...');
+    await supabase.auth.signOut();
+    await AsyncStorage.removeItem('supabase.auth.token');
+    console.log('Session cleared');
+    return true;
+  } catch (error) {
+    console.error('Error clearing session:', error);
+    return false;
+  }
+};
+
+
+/**
+ * Creates an expense
+ */
+export const createExpense = async (expenseData) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not found');
+    
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert({ ...expenseData, user_id: user.id })
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating expense:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update budget allocations in batch
+ */
+export const updateBudgetAllocations = async (allocationsData) => {
+  try {
+    // Prepare the RPC call with all allocations data
+    const { data, error } = await supabase.rpc('update_budget_allocations', {
+      allocations: allocationsData
+    });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating budget allocations:', error);
+    throw error;
+  }
+};
+
+// If you don't have the RPC function set up, you can use this alternative approach
+export const updateBudgetAllocationsAlt = async (allocationsData) => {
+  try {
+    // Delete existing allocations for this budget
+    if (allocationsData.length > 0) {
+      const budgetId = allocationsData[0].budget_id;
+      
+      const { error: deleteError } = await supabase
+        .from('budget_allocations')
+        .delete()
+        .eq('budget_id', budgetId);
+        
+      if (deleteError) throw deleteError;
     }
-  };
+    
+    // Insert new allocations
+    const { data, error } = await supabase
+      .from('budget_allocations')
+      .insert(allocationsData)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating budget allocations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Gets transactions with optional filters and category info
+ */
+export const getTransactions = async (filters = {}) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not found');
+    
+    let query = supabase
+      .from('expenses')
+      .select(`
+        *,
+        categories(id, name, color, icon)
+      `)
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+    
+    // Apply filters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        if (key === 'start_date') {
+          query = query.gte('date', value);
+        } else if (key === 'end_date') {
+          query = query.lte('date', value);
+        } else if (key !== 'limit') {
+          query = query.eq(key, value);
+        }
+      }
+    });
+    
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    return [];
+  }
+};
