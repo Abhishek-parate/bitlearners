@@ -283,19 +283,39 @@ export const getExpenses = async (filters: any = {}) => {
 /**
  * Adds a new income record
  */
-export const addIncome = async (incomeData: any) => {
+// Updated addIncome function to avoid note field issues
+export const addIncome = async (incomeData) => {
   try {
+    console.log('Adding income with data:', incomeData);
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) throw new Error('User not found');
     
+    // Create a safe version of the income data without problematic fields
+    const safeIncomeData = {
+      user_id: user.id,
+      amount: incomeData.amount,
+      description: incomeData.description,
+      date: incomeData.date,
+      is_recurring: incomeData.is_recurring || false,
+      frequency: incomeData.frequency
+      // Remove note field until it's added to the schema
+      // note: incomeData.note
+    };
+    
     const { data, error } = await supabase
       .from('income')
-      .insert({ ...incomeData, user_id: user.id })
+      .insert(safeIncomeData)
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error adding income:', error);
+      throw error;
+    }
+    
+    console.log('Income added successfully:', data);
     return data;
   } catch (error) {
     console.error('Error adding income:', error);
