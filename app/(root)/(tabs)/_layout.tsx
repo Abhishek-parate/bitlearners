@@ -114,13 +114,27 @@ export default function TabsLayout() {
           href: null, 
         }}
       />
-
-<Tabs.Screen
-        name="reports/add"
+      <Tabs.Screen
+        name="expense/add"
         options={{
           href: null, 
         }}
       />
+
+<Tabs.Screen
+        name="reports/index"
+        options={{
+          href: null, 
+        }}
+      />
+
+<Tabs.Screen
+        name="income/add"
+        options={{
+          href: null, 
+        }}
+      />
+
       <Tabs.Screen
         name="income/[id]"
         options={{
