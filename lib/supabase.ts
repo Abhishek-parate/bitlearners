@@ -363,7 +363,7 @@ export const getIncome = async (filters: any = {}) => {
 };
 
 /**
- * Gets all savings goals
+ * Gets all savings goals for the current user
  */
 export const getSavingsGoals = async () => {
   try {
@@ -377,10 +377,14 @@ export const getSavingsGoals = async () => {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching savings goals:', error);
+      throw error;
+    }
+    
     return data || [];
   } catch (error) {
-    console.error('Error fetching savings goals:', error);
+    console.error('Error in getSavingsGoals:', error);
     return [];
   }
 };
@@ -388,22 +392,29 @@ export const getSavingsGoals = async () => {
 /**
  * Creates a new savings goal
  */
-export const createSavingsGoal = async (goalData: any) => {
+export const createSavingsGoal = async (goalData) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) throw new Error('User not found');
     
+    // Add user_id to the goal data
+    const completeGoalData = { ...goalData, user_id: user.id };
+    
     const { data, error } = await supabase
       .from('savings_goals')
-      .insert({ ...goalData, user_id: user.id })
+      .insert(completeGoalData)
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating savings goal:', error);
+      throw error;
+    }
+    
     return data;
   } catch (error) {
-    console.error('Error creating savings goal:', error);
+    console.error('Error in createSavingsGoal:', error);
     throw error;
   }
 };
@@ -411,8 +422,28 @@ export const createSavingsGoal = async (goalData: any) => {
 /**
  * Updates an existing savings goal
  */
-export const updateSavingsGoal = async (goalId: string, updates: any) => {
+export const updateSavingsGoal = async (goalId, updates) => {
   try {
+    if (!goalId) throw new Error('Goal ID is required');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not found');
+    
+    // Make sure goal belongs to current user
+    const { data: existingGoal, error: fetchError } = await supabase
+      .from('savings_goals')
+      .select('*')
+      .eq('id', goalId)
+      .eq('user_id', user.id)
+      .single();
+    
+    if (fetchError || !existingGoal) {
+      console.error('Error fetching goal or goal not found:', fetchError);
+      throw new Error('Goal not found or unauthorized');
+    }
+    
+    // Update the goal
     const { data, error } = await supabase
       .from('savings_goals')
       .update(updates)
@@ -420,10 +451,41 @@ export const updateSavingsGoal = async (goalId: string, updates: any) => {
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating savings goal:', error);
+      throw error;
+    }
+    
     return data;
   } catch (error) {
-    console.error('Error updating savings goal:', error);
+    console.error('Error in updateSavingsGoal:', error);
+    throw error;
+  }
+};
+
+/**
+ * Deletes a savings goal
+ */
+export const deleteSavingsGoal = async (goalId) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not found');
+    
+    const { error } = await supabase
+      .from('savings_goals')
+      .delete()
+      .eq('id', goalId)
+      .eq('user_id', user.id); // Ensure goal belongs to user
+      
+    if (error) {
+      console.error('Error deleting savings goal:', error);
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deleteSavingsGoal:', error);
     throw error;
   }
 };
@@ -624,3 +686,5 @@ export const getTransactions = async (filters = {}) => {
     return [];
   }
 };
+
+

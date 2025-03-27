@@ -299,7 +299,7 @@ export default function ExplorePage() {
           <TouchableOpacity 
             className="p-2"
             onPress={() => {
-              router.push('/transaction-report');
+              router.push('/reports/');
             }}
           >
             <Ionicons name="analytics-outline" size={24} color="#191D31" />
@@ -414,7 +414,7 @@ export default function ExplorePage() {
           
           <TouchableOpacity 
             className="bg-primary-300 w-14 h-14 rounded-full items-center justify-center shadow-md"
-            onPress={() => router.push('/(root)/(tabs)/expense')}
+            onPress={() => router.push('/expense/add')}
           >
             <Ionicons name="add" size={24} color="white" />
             <Ionicons name="cart-outline" size={12} color="white" style={{ position: 'absolute', bottom: 10 }} />

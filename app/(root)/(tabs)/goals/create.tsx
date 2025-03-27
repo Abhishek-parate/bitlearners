@@ -1,3 +1,4 @@
+// app/(root)/(tabs)/savings/index.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -7,7 +8,8 @@ import {
   TextInput, 
   ScrollView, 
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -20,11 +22,32 @@ import {
   createSavingsGoal, 
   updateSavingsGoal, 
   getExpenses, 
-  getIncome 
+  getIncome,
+  supabase // Import supabase client for delete functionality
 } from '@/lib/supabase';
 
-// Import AI services
-import { generateSavingsRecommendations } from '@/lib/ai-service';
+// Import AI services if available
+// If not implemented yet, create dummy function for generateSavingsRecommendations
+const generateSavingsRecommendations = async (expenses, budgets, savingsGoals) => {
+  // Dummy implementation if AI service isn't ready
+  return {
+    success: true,
+    data: {
+      recommendations: [
+        {
+          title: "Reduce Dining Out",
+          description: "Your spending on restaurants is high. Try cooking at home more often to save money.",
+          potentialSavings: 120.00
+        },
+        {
+          title: "Review Subscriptions",
+          description: "Review your monthly subscriptions and cancel unused services.",
+          potentialSavings: 45.00
+        }
+      ]
+    }
+  };
+};
 
 export default function SavingsGoalsPage() {
   const [loading, setLoading] = useState(true);
@@ -37,6 +60,8 @@ export default function SavingsGoalsPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [savingTips, setSavingTips] = useState([]);
   const [generatingTips, setGeneratingTips] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [updating, setUpdating] = useState(false);
   
   useEffect(() => {
     fetchGoals();
@@ -46,9 +71,16 @@ export default function SavingsGoalsPage() {
     try {
       setLoading(true);
       const data = await getSavingsGoals();
-      setGoals(data || []);
+      if (data && Array.isArray(data)) {
+        setGoals(data);
+        console.log(`Fetched ${data.length} savings goals`);
+      } else {
+        console.log('No savings goals found or invalid response format');
+        setGoals([]);
+      }
     } catch (error) {
       console.error('Error fetching savings goals:', error);
+      Alert.alert('Error', 'Failed to load savings goals');
     } finally {
       setLoading(false);
     }
@@ -61,6 +93,8 @@ export default function SavingsGoalsPage() {
     }
     
     try {
+      setSubmitting(true);
+      
       const goalData = {
         name,
         target_amount: parseFloat(targetAmount),
@@ -68,7 +102,14 @@ export default function SavingsGoalsPage() {
         deadline: deadline.toISOString().split('T')[0]
       };
       
-      await createSavingsGoal(goalData);
+      console.log('Creating goal with data:', goalData);
+      const newGoal = await createSavingsGoal(goalData);
+      
+      if (!newGoal) {
+        throw new Error('Failed to create goal - no data returned');
+      }
+      
+      console.log('Goal created successfully:', newGoal);
       
       // Reset form
       setName('');
@@ -80,20 +121,35 @@ export default function SavingsGoalsPage() {
       // Reload goals
       await fetchGoals();
       
+      Alert.alert('Success', 'Savings goal created successfully!');
     } catch (error) {
       console.error('Error creating savings goal:', error);
       Alert.alert('Error', 'Failed to create savings goal');
+    } finally {
+      setSubmitting(false);
     }
   };
   
   const handleUpdateAmount = async (goalId, newAmount) => {
     try {
-      await updateSavingsGoal(goalId, { current_amount: parseFloat(newAmount) });
-      // Reload goals
+      setUpdating(true);
+      console.log(`Updating goal ${goalId} amount to: ${newAmount}`);
+      
+      const result = await updateSavingsGoal(goalId, { 
+        current_amount: parseFloat(newAmount) 
+      });
+      
+      if (result) {
+        console.log('Goal updated successfully:', result);
+      }
+      
+      // Reload goals to refresh data
       await fetchGoals();
     } catch (error) {
       console.error('Error updating savings goal amount:', error);
       Alert.alert('Error', 'Failed to update amount');
+    } finally {
+      setUpdating(false);
     }
   };
   
@@ -111,11 +167,22 @@ export default function SavingsGoalsPage() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Delete goal logic
-              // For Supabase, this would be something like:
-              // await supabase.from('savings_goals').delete().eq('id', goalId);
+              console.log(`Deleting goal with ID: ${goalId}`);
               
-              // Reload goals
+              // Delete goal using Supabase
+              const { error } = await supabase
+                .from('savings_goals')
+                .delete()
+                .eq('id', goalId);
+              
+              if (error) throw error;
+              
+              console.log('Goal deleted successfully');
+              
+              // Update local state
+              setGoals(goals.filter(goal => goal.id !== goalId));
+              
+              // Refresh list from database
               await fetchGoals();
             } catch (error) {
               console.error('Error deleting savings goal:', error);
@@ -189,16 +256,19 @@ export default function SavingsGoalsPage() {
       
       // Fetch necessary data
       const [expenses, budgets, savingsGoalsData] = await Promise.all([
-        getExpenses(),
+        getExpenses({ limit: 100 }), // Get last 100 expenses
         [], // Placeholder for budgets
         getSavingsGoals()
       ]);
+      
+      console.log(`Fetched ${expenses.length} expenses for generating tips`);
       
       // Call AI service
       const result = await generateSavingsRecommendations(expenses, budgets, savingsGoalsData);
       
       if (result.success && result.data) {
         setSavingTips(result.data.recommendations || []);
+        console.log(`Generated ${result.data.recommendations.length} saving tips`);
       } else {
         throw new Error(result.error || 'Failed to generate tips');
       }
@@ -208,6 +278,11 @@ export default function SavingsGoalsPage() {
     } finally {
       setGeneratingTips(false);
     }
+  };
+  
+  // Format currency helper
+  const formatCurrency = (amount) => {
+    return `$${parseFloat(amount).toFixed(2)}`;
   };
   
   if (loading) {
@@ -305,8 +380,13 @@ export default function SavingsGoalsPage() {
             <TouchableOpacity 
               className="bg-primary-300 p-3 rounded-xl"
               onPress={handleAddGoal}
+              disabled={submitting}
             >
-              <Text className="font-rubik-medium text-white text-center">Create Goal</Text>
+              {submitting ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text className="font-rubik-medium text-white text-center">Create Goal</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -379,7 +459,7 @@ export default function SavingsGoalsPage() {
                         thumbTintColor="#0061FF"
                       />
                       <Text className="font-rubik-medium text-black-300 w-16 text-right">
-                        ${goal.current_amount.toFixed(0)}
+                        ${Math.round(goal.current_amount)}
                       </Text>
                     </View>
                   </View>

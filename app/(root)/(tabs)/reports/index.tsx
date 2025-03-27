@@ -1,3 +1,4 @@
+// app/(root)/(tabs)/transaction-report.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -20,11 +21,111 @@ import {
   getIncome
 } from '@/lib/supabase';
 
-// Import AI services
-import { 
-  analyzeSpendingTrends, 
-  generateFinancialHealthScore 
-} from '@/lib/ai-service';
+// Create dummy AI service functions if they don't exist yet
+const analyzeSpendingTrends = async (expenses, period) => {
+  // Implement a basic version here that doesn't require AI
+  try {
+    console.log(`Analyzing spending trends for ${expenses.length} expenses over ${period} period`);
+    
+    // Group expenses by category
+    const categoryTotals = {};
+    let totalSpending = 0;
+    
+    expenses.forEach(expense => {
+      const catId = expense.category_id || 'uncategorized';
+      categoryTotals[catId] = categoryTotals[catId] || 0;
+      categoryTotals[catId] += Number(expense.amount);
+      totalSpending += Number(expense.amount);
+    });
+    
+    // Find top category
+    let topCategoryId = null;
+    let topAmount = 0;
+    
+    Object.entries(categoryTotals).forEach(([catId, amount]) => {
+      if (amount > topAmount) {
+        topAmount = amount;
+        topCategoryId = catId;
+      }
+    });
+    
+    // Generate insights
+    const insights = [];
+    
+    // Top category insight
+    if (topCategoryId) {
+      const percentage = totalSpending > 0 ? Math.round((topAmount / totalSpending) * 100) : 0;
+      let categoryName = "Uncategorized";
+      
+      // Find category name if it's not uncategorized
+      if (topCategoryId !== 'uncategorized') {
+        const foundCategory = expenses.find(e => e.category_id === topCategoryId)?.categories;
+        if (foundCategory) {
+          categoryName = foundCategory.name;
+        }
+      }
+      
+      insights.push({
+        title: 'Top Spending Category',
+        description: `${categoryName} is your highest spending category at ${percentage}% of total expenses.`,
+        type: 'category'
+      });
+    }
+    
+    // Spending trend insight
+    insights.push({
+      title: 'Spending Trend',
+      description: `You've spent a total of $${totalSpending.toFixed(2)} in this ${period}.`,
+      type: 'trend'
+    });
+    
+    // If there's enough data, add more insights
+    if (expenses.length > 5) {
+      // Find the highest single expense
+      const highestExpense = expenses.reduce((highest, current) => 
+        Number(current.amount) > Number(highest.amount) ? current : highest, 
+        { amount: 0 }
+      );
+      
+      if (highestExpense.amount > 0) {
+        insights.push({
+          title: 'Largest Expense',
+          description: `Your largest single expense was $${Number(highestExpense.amount).toFixed(2)} for "${highestExpense.description || 'Unlabeled'}"`,
+          type: 'anomaly'
+        });
+      }
+    }
+    
+    return {
+      success: true,
+      data: {
+        insights
+      }
+    };
+  } catch (error) {
+    console.error('Error in analyzeSpendingTrends:', error);
+    return {
+      success: false,
+      error: 'Failed to analyze spending trends'
+    };
+  }
+};
+
+const generateFinancialHealthScore = async (expenses, income) => {
+  // Dummy implementation
+  return {
+    success: true,
+    data: {
+      score: 75,
+      message: 'Good financial health',
+      improvements: [
+        'Create a dedicated emergency fund',
+        'Track daily expenses to identify spending leaks',
+        'Reduce non-essential purchases'
+      ]
+    }
+  };
+};
 
 export default function TransactionReportPage() {
   const [loading, setLoading] = useState(true);
@@ -88,7 +189,7 @@ export default function TransactionReportPage() {
             id: cat.id,
             name: cat.name,
             color: cat.color || getRandomColor(cat.name),
-            icon: cat.icon || 'grid',
+            icon: cat.icon || 'grid-outline',
             amount: 0
           };
         });
@@ -104,7 +205,7 @@ export default function TransactionReportPage() {
                 id: 'uncategorized',
                 name: 'Uncategorized',
                 color: '#AAAAAA',
-                icon: 'help-circle',
+                icon: 'help-circle-outline',
                 amount: 0
               };
             }
@@ -118,9 +219,6 @@ export default function TransactionReportPage() {
           .sort((a, b) => b.amount - a.amount);
         
         setCategorySpending(categoryArray);
-        
-        // Simulate financial health score
-        // In a real app, you'd calculate this based on income, expenses, and other factors
         
         // Calculate total expenses and income
         const totalExpenses = expensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
@@ -187,18 +285,19 @@ export default function TransactionReportPage() {
   };
   
   const getCategoryIcon = (iconName) => {
+    // Map of valid Ionicons names that work with your categories
     const defaultIcons = {
-      'food': 'fast-food',
-      'transport': 'bus',
-      'housing': 'home',
-      'education': 'book',
-      'entertainment': 'film',
-      'shopping': 'cart',
-      'health': 'fitness',
-      'miscellaneous': 'albums'
+      'food': 'fast-food-outline',
+      'transport': 'bus-outline',
+      'housing': 'home-outline',
+      'education': 'book-outline',
+      'entertainment': 'film-outline', // Changed from 'movie'
+      'shopping': 'cart-outline',
+      'health': 'fitness-outline',
+      'miscellaneous': 'albums-outline'
     };
     
-    return defaultIcons[iconName] || iconName || 'albums';
+    return defaultIcons[iconName] || iconName || 'albums-outline';
   };
   
   const getPercentage = (amount) => {
@@ -210,7 +309,7 @@ export default function TransactionReportPage() {
     try {
       setGeneratingInsights(true);
       
-      // Call AI service to analyze spending trends
+      // Call our local implementation to analyze spending trends
       const result = await analyzeSpendingTrends(expenses, period);
       
       if (result.success && result.data) {
@@ -525,10 +624,10 @@ export default function TransactionReportPage() {
                     <Ionicons 
                       name={
                         insight.type === 'trend' 
-                          ? 'trending-up' 
+                          ? 'trending-up-outline' 
                           : insight.type === 'anomaly' 
-                            ? 'warning' 
-                            : 'pie-chart'
+                            ? 'warning-outline' 
+                            : 'pie-chart-outline'
                       } 
                       size={20} 
                       color={

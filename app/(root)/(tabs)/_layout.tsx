@@ -79,15 +79,7 @@ export default function TabsLayout() {
         }}
       />
       
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
+
 
             <Tabs.Screen
         name="goals/index"
@@ -109,13 +101,51 @@ export default function TabsLayout() {
       />
 
 <Tabs.Screen
+        name="budget/[id]"
+        options={{
+          href: null, 
+        }}
+      />
+
+<Tabs.Screen
+        name="budget/add"
+        options={{
+          href: null, 
+        }}
+      />
+<Tabs.Screen
+        name="budget/insights"
+        options={{
+          href: null, 
+        }}
+      />
+
+<Tabs.Screen
         name="expense/[id]"
         options={{
           href: null, 
         }}
       />
+      
+
+      
+
+<Tabs.Screen
+        name="profile"
+        options={{
+          href: null, 
+        }}
+      />
+
       <Tabs.Screen
         name="expense/add"
+        options={{
+          href: null, 
+        }}
+      />
+
+<Tabs.Screen
+        name="expense/edit/[id]"
         options={{
           href: null, 
         }}

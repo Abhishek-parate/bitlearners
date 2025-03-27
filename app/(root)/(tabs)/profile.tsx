@@ -8,10 +8,11 @@ import {
   ScrollView, 
   ActivityIndicator,
   Alert,
-  Switch
+  Switch,
+  TextInput,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthProvider';
 
 // Import Supabase functions
@@ -28,6 +29,14 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  
+  // Currency selection
+  const [currency, setCurrency] = useState('USD');
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const currencies = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'CNY'];
   
   useEffect(() => {
     fetchProfile();
@@ -38,8 +47,7 @@ export default function ProfilePage() {
       setLoading(true);
       
       if (!user) {
-        console.log('No user found, redirecting to login');
-        router.replace('/(auth)/login');
+        console.log('No user found in profile page');
         return;
       }
       
@@ -47,6 +55,8 @@ export default function ProfilePage() {
       
       if (profileData) {
         setProfile(profileData);
+        setFullName(profileData.full_name || '');
+        setCurrency(profileData.currency || 'USD');
       } else {
         console.log('No profile found, profile may need to be created');
       }
@@ -74,9 +84,6 @@ export default function ProfilePage() {
               setUser(null);
               // Clear any stored session data
               await clearSession();
-              
-              // Navigate to login screen
-              router.replace('/(auth)/login');
             } catch (error) {
               console.error('Error signing out:', error);
               Alert.alert('Error', 'Failed to sign out');
@@ -89,11 +96,56 @@ export default function ProfilePage() {
   };
   
   const handleEditProfile = () => {
-    router.push('/profile/edit');
+    setShowEditModal(true);
+  };
+  
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      
+      const updates = {
+        full_name: fullName,
+        // Add other profile fields as needed
+      };
+      
+      const updatedProfile = await updateProfile(updates);
+      
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+        setShowEditModal(false);
+        Alert.alert('Success', 'Profile updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
+    }
   };
   
   const handleCurrencyChange = () => {
-    router.push('/profile/currency');
+    setShowCurrencyModal(true);
+  };
+  
+  const handleSelectCurrency = async (selectedCurrency) => {
+    try {
+      setCurrency(selectedCurrency);
+      setShowCurrencyModal(false);
+      
+      // Update profile with new currency
+      const updates = {
+        currency: selectedCurrency
+      };
+      
+      const updatedProfile = await updateProfile(updates);
+      
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+      }
+    } catch (error) {
+      console.error('Error updating currency:', error);
+      Alert.alert('Error', 'Failed to update currency');
+    }
   };
   
   const handleThemeToggle = (value) => {
@@ -184,7 +236,6 @@ export default function ProfilePage() {
           
           <TouchableOpacity 
             className="bg-primary-300 p-3 rounded-xl"
-            onPress={() => router.push('/reports')}
           >
             <Text className="font-rubik-medium text-white text-center">View Financial Reports</Text>
           </TouchableOpacity>
@@ -206,7 +257,7 @@ export default function ProfilePage() {
                 <Text className="font-rubik text-black-300">Currency</Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="font-rubik text-black-100 mr-1">{profile?.currency || 'USD'}</Text>
+                <Text className="font-rubik text-black-100 mr-1">{currency}</Text>
                 <Ionicons name="chevron-forward" size={20} color="#8C8E98" />
               </View>
             </TouchableOpacity>
@@ -243,7 +294,6 @@ export default function ProfilePage() {
             
             <TouchableOpacity 
               className="flex-row justify-between items-center p-4 border-b border-accent-100"
-              onPress={() => router.push('/about')}
             >
               <View className="flex-row items-center">
                 <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
@@ -256,7 +306,6 @@ export default function ProfilePage() {
             
             <TouchableOpacity 
               className="flex-row justify-between items-center p-4"
-              onPress={() => router.push('/help')}
             >
               <View className="flex-row items-center">
                 <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-3">
@@ -277,6 +326,82 @@ export default function ProfilePage() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      
+      {/* Edit Profile Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showEditModal}
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View className="flex-1 justify-end bg-black bg-opacity-30">
+          <View className="bg-white rounded-t-3xl p-6">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="font-rubik-semibold text-black-300 text-xl">Edit Profile</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color="#191D31" />
+              </TouchableOpacity>
+            </View>
+            
+            <View className="mb-4">
+              <Text className="font-rubik text-black-100 mb-2">Full Name</Text>
+              <TextInput
+                className="bg-accent-100 p-4 rounded-xl font-rubik text-black-300"
+                placeholder="Enter your full name"
+                value={fullName}
+                onChangeText={setFullName}
+              />
+            </View>
+            
+            {/* Add more profile fields as needed */}
+            
+            <TouchableOpacity 
+              className="bg-primary-300 p-4 rounded-xl mt-2"
+              onPress={handleSaveProfile}
+              disabled={savingProfile}
+            >
+              {savingProfile ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="font-rubik-medium text-white text-center">Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Currency Selection Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showCurrencyModal}
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View className="flex-1 justify-end bg-black bg-opacity-30">
+          <View className="bg-white rounded-t-3xl p-6">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="font-rubik-semibold text-black-300 text-xl">Select Currency</Text>
+              <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
+                <Ionicons name="close" size={24} color="#191D31" />
+              </TouchableOpacity>
+            </View>
+            
+            {currencies.map((currencyOption) => (
+              <TouchableOpacity 
+                key={currencyOption}
+                className={`p-4 rounded-xl mb-2 ${currency === currencyOption ? 'bg-primary-100' : 'bg-accent-100'}`}
+                onPress={() => handleSelectCurrency(currencyOption)}
+              >
+                <Text 
+                  className={`font-rubik text-center ${currency === currencyOption ? 'text-primary-300 font-rubik-medium' : 'text-black-300'}`}
+                >
+                  {currencyOption}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

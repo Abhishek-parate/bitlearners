@@ -80,11 +80,11 @@ export default function HomePage() {
   const screenWidth = Dimensions.get('window').width;
 
   const handleSetBudget = () => {
-    router.push('/(root)/(tabs)/budget');
+    router.push('/budget/add');
   };
 
   const handleSetExpense = () => {
-    router.push('/(root)/(tabs)/expense');
+    router.push('/expense/add');
   };
 
   const getCategoryIcon = (categoryName = '') => {
@@ -508,7 +508,7 @@ setCategories(validCategories);
             </View>
             <Text className="font-rubik text-black-200">{aiInsight.description}</Text>
             <TouchableOpacity 
-              onPress={() => router.push('/(root)/(tabs)/explore')}
+              onPress={() => router.push('/budget/insights')}
               className="mt-3 self-end"
             >
               <Text className="font-rubik-medium text-primary-300">More Insights</Text>
@@ -516,21 +516,7 @@ setCategories(validCategories);
           </View>
         )}
 
-        {/* AI Actions */}
-        <View className="mx-4 flex-row justify-between mb-4">
-          {aiActions.map(action => (
-            <TouchableOpacity 
-              key={action.id}
-              onPress={action.action}
-              className="bg-white p-4 rounded-2xl shadow-sm w-[48%] items-center"
-            >
-              <View className="w-12 h-12 mb-2 bg-primary-100 rounded-full items-center justify-center">
-                <Ionicons name={action.icon} size={24} color="#0061FF" />
-              </View>
-              <Text className="font-rubik-medium text-black-300 text-center">{action.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+     
 
         {/* Weekly Spending Chart */}
         <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
@@ -624,12 +610,7 @@ setCategories(validCategories);
        {/* Category Spending */}
        {/* Category Spending */}
 <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
-  <View className="flex-row justify-between items-center mb-2">
-    <Text className="font-rubik-medium text-black-300 text-lg">Spending by Category</Text>
-    <TouchableOpacity onPress={() => console.log('Categories debug:', categories)}>
-      <Text className="font-rubik-medium text-primary-300 text-sm">Debug</Text>
-    </TouchableOpacity>
-  </View>
+  
   
   {categories && categories.length > 0 ? (
     categories.map((category) => (
@@ -677,7 +658,7 @@ setCategories(validCategories);
         <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="font-rubik-medium text-black-300 text-lg">Recent Transactions</Text>
-            <TouchableOpacity onPress={() => router.push('/expense/index')}>
+            <TouchableOpacity onPress={() => router.push('/expense/')}>
               <Text className="font-rubik-medium text-primary-300">See All</Text>
             </TouchableOpacity>
           </View>
