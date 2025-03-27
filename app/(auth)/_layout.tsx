@@ -1,9 +1,10 @@
 // app/(auth)/_layout.tsx
 import { Stack } from 'expo-router';
-import { useAuth } from '../../hooks/useAuth';
+
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '@/contexts/AuthProvider';
 
 export default function AuthLayout() {
   const { session, loading } = useAuth();

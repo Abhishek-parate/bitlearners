@@ -1,8 +1,7 @@
-
 // app/(root)/_layout.tsx
 import React from 'react';
 import { Stack } from 'expo-router';
-import { useAuth } from '../../contexts/AuthProvider';
+import { useAuth } from '../../contexts/AuthProvider'; // Make sure this path is correct for your project
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
@@ -34,9 +33,8 @@ export default function RootLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="budget" options={{ presentation: 'modal', headerShown: true, title: 'Set Budget' }} />
-      <Stack.Screen name="expense" options={{ presentation: 'modal', headerShown: true, title: 'Add Expense' }} />
-  
+      <Stack.Screen name="budget" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="expense" options={{ presentation: 'modal' }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
     </Stack>
   );

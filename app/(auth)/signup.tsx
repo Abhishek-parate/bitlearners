@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import { useAuth } from '../../hooks/useAuth';
 import * as WebBrowser from 'expo-web-browser';
+import { useAuth } from '@/contexts/AuthProvider';
 
 // Preload browser for authentication
 export const useWarmUpBrowser = () => {
