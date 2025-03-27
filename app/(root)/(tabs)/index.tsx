@@ -76,8 +76,28 @@ export default function HomePage() {
   const { user } = useAuth();
   
   // Get display name from user object
-  const displayName = user?.user_metadata?.full_name || user?.email || "Student";
-  const screenWidth = Dimensions.get('window').width;
+// Get display name from user object or get first part of email
+const getDisplayName = () => {
+  // First check if there's a full_name in user metadata
+  if (user?.user_metadata?.full_name) {
+    return user.user_metadata.full_name;
+  } 
+  // If no full name, extract the username portion from email
+  else if (user?.email) {
+    // Extract everything before the @ symbol
+    const emailParts = user.email.split('@');
+    if (emailParts.length > 0) {
+      // Capitalize the first letter
+      const username = emailParts[0];
+      return username.charAt(0).toUpperCase() + username.slice(1);
+    }
+  }
+  
+  // Default fallback
+  return "Student";
+};
+
+const displayName = getDisplayName();  const screenWidth = Dimensions.get('window').width;
 
   const handleSetBudget = () => {
     router.push('/budget/add');
@@ -576,7 +596,7 @@ setCategories(validCategories);
           <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
             <View className="flex-row justify-between items-center mb-2">
               <Text className="font-rubik-medium text-black-300 text-lg">{savingsGoal.name}</Text>
-              <TouchableOpacity onPress={() => router.push('/savings-goals')}>
+              <TouchableOpacity onPress={() => router.push('/goals/create')}>
                 <Text className="font-rubik-medium text-primary-300 text-sm">View All</Text>
               </TouchableOpacity>
             </View>

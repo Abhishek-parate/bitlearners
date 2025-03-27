@@ -38,7 +38,7 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -48,7 +48,7 @@ export default function TabsLayout() {
         options={{
           title: 'Budget',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="wallet" size={size} color={color} />
+            <Ionicons name="wallet-outline" size={size} color={color} />
           ),
         }}
       />
@@ -61,7 +61,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View 
               className="w-14 h-14 -mt-8 rounded-full items-center justify-center"
-              style={{ backgroundColor: focused ? '#0061FF' : '#0061FF' }}
+              style={{ backgroundColor: '#0061FF' }}
             >
               <Ionicons name="add" size={30} color="white" />
             </View>
@@ -74,115 +74,43 @@ export default function TabsLayout() {
         options={{
           title: 'AI',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flash" size={size} color={color} />
+            <Ionicons name="flash-outline" size={size} color={color} />
           ),
         }}
       />
       
-
-
-            <Tabs.Screen
-        name="goals/index"
+      <Tabs.Screen
+        name="goals/create"
         options={{
           title: 'Goals',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="targrt" size={size} color={color} />
+            <Ionicons name="trophy-outline" size={size} color={color} />
           ),
         }}
       />
 
-<Tabs.Screen
-        name="income/index"
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
-
-<Tabs.Screen
-        name="budget/[id]"
-        options={{
-          href: null, 
-        }}
-      />
-
-<Tabs.Screen
-        name="budget/add"
-        options={{
-          href: null, 
-        }}
-      />
-<Tabs.Screen
-        name="budget/insights"
-        options={{
-          href: null, 
-        }}
-      />
-
-<Tabs.Screen
-        name="expense/[id]"
-        options={{
-          href: null, 
-        }}
-      />
-      
-
-      
-
-<Tabs.Screen
+      <Tabs.Screen
         name="profile"
         options={{
-          href: null, 
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
         }}
       />
 
-      <Tabs.Screen
-        name="expense/add"
-        options={{
-          href: null, 
-        }}
-      />
-
-<Tabs.Screen
-        name="expense/edit/[id]"
-        options={{
-          href: null, 
-        }}
-      />
-
-<Tabs.Screen
-        name="reports/index"
-        options={{
-          href: null, 
-        }}
-      />
-
-<Tabs.Screen
-        name="income/add"
-        options={{
-          href: null, 
-        }}
-      />
-
-      <Tabs.Screen
-        name="income/[id]"
-        options={{
-          href: null, 
-        }}
-      />
-
-
-
-<Tabs.Screen
-        name="income/edit/[id]"
-        options={{
-          href: null, 
-        }}
-      />
-
+      {/* Hidden screens */}
+      <Tabs.Screen name="income/index" options={{ href: null }} />
+      <Tabs.Screen name="budget/[id]" options={{ href: null }} />
+      <Tabs.Screen name="budget/add" options={{ href: null }} />
+      <Tabs.Screen name="budget/insights" options={{ href: null }} />
+      <Tabs.Screen name="expense/[id]" options={{ href: null }} />
+      <Tabs.Screen name="expense/add" options={{ href: null }} />
+      <Tabs.Screen name="expense/edit/[id]" options={{ href: null }} />
+      <Tabs.Screen name="reports/index" options={{ href: null }} />
+      <Tabs.Screen name="income/add" options={{ href: null }} />
+      <Tabs.Screen name="income/[id]" options={{ href: null }} />
+      <Tabs.Screen name="income/edit/[id]" options={{ href: null }} />
     </Tabs>
-
-    
   );
 }
