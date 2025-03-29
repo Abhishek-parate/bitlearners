@@ -84,7 +84,7 @@ export default function IncomeHistoryPage() {
   
   // Format currency
   const formatCurrency = (amount) => {
-    return `$${Number(amount).toFixed(2)}`;
+    return `₹${Number(amount).toFixed(2)}`;
   };
   
   // Format date

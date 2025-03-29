@@ -75,7 +75,7 @@ const analyzeSpendingTrends = async (expenses, period) => {
     // Spending trend insight
     insights.push({
       title: 'Spending Trend',
-      description: `You've spent a total of $${totalSpending.toFixed(2)} in this ${period}.`,
+      description: `You've spent a total of ₹${totalSpending.toFixed(2)} in this ${period}.`,
       type: 'trend'
     });
     
@@ -90,7 +90,7 @@ const analyzeSpendingTrends = async (expenses, period) => {
       if (highestExpense.amount > 0) {
         insights.push({
           title: 'Largest Expense',
-          description: `Your largest single expense was $${Number(highestExpense.amount).toFixed(2)} for "${highestExpense.description || 'Unlabeled'}"`,
+          description: `Your largest single expense was ₹${Number(highestExpense.amount).toFixed(2)} for "${highestExpense.description || 'Unlabeled'}"`,
           type: 'anomaly'
         });
       }

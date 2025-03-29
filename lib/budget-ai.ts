@@ -350,5 +350,5 @@ export async function generateBudgetInsights(userId: string, budgetId?: string) 
 
 // Helper to format currency
 function formatCurrency(amount: number) {
-  return `$${amount.toFixed(2)}`;
+  return `₹${amount.toFixed(2)}`;
 }

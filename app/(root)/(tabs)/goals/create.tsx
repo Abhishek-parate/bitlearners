@@ -282,7 +282,7 @@ export default function SavingsGoalsPage() {
   
   // Format currency helper
   const formatCurrency = (amount) => {
-    return `$${parseFloat(amount).toFixed(2)}`;
+    return `₹${parseFloat(amount).toFixed(2)}`;
   };
   
   if (loading) {

@@ -307,7 +307,7 @@ export default function BudgetDetailPage() {
   };
   
   const formatCurrency = (amount) => {
-    return `$${parseFloat(amount).toFixed(2)}`;
+    return `₹${parseFloat(amount).toFixed(2)}`;
   };
   
   const formatDateRange = (startDate, endDate) => {
