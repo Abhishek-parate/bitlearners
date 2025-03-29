@@ -236,11 +236,11 @@ export default function ProfilePage() {
           </View>
           
           <TouchableOpacity 
-            className="bg-primary-300 p-3 rounded-xl font-rubik-medium text-white text-center"
+            className="bg-primary-300 p-3 rounded-xl "
             onPress={() => router.push('/(root)/(tabs)/reports')}
 
           >
-           View Financial Reports
+            <Text className="font-rubik-medium text-white text-center">View Financial Reports</Text>
           </TouchableOpacity>
 
           
