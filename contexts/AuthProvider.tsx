@@ -1,258 +1,116 @@
-// contexts/AuthProvider.tsx
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from "../lib/supabase";
-import { router } from 'expo-router';
-import { SessionManager } from '../lib/session-manager';
+// src/contexts/AuthProvider.tsx
+
+import { supabase } from "@/utils/supabase";
+import { Session, User } from "@supabase/supabase-js";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { ActivityIndicator, View, Alert } from "react-native";
+import * as SecureStore from "expo-secure-store";
+import { router } from "expo-router";
 
 type AuthContextType = {
-  user: User | null;
   session: Session | null;
-  profile: any | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  user: User | null;
+  isAuthenticated: boolean;
+  logout: () => Promise<void>;
 };
 
-// Create the context with default values
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  profile: null,
-  loading: true,
-  signIn: async () => {},
-  signUp: async () => {},
-  signOut: async () => {},
-  refreshProfile: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Create the provider component
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export default function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
 
-  // Load the initial session
   useEffect(() => {
-    let mounted = true;
-    
-    const getInitialSession = async () => {
+    const getSession = async () => {
       try {
-        console.log('Initializing auth session...');
-        
-        // Check for stored session first
-        const storedSession = await SessionManager.getSession();
-        
-        if (storedSession) {
-          console.log('Found stored session, using it...');
-          if (mounted) {
-            setSession(storedSession);
-            setUser(storedSession.user);
-            if (storedSession.user) {
-              await fetchProfile(storedSession.user.id);
-            }
-          }
-        } else {
-          // No stored session, get from Supabase
-          console.log('No stored session, checking with Supabase...');
-          const { data } = await supabase.auth.getSession();
-          
-          if (mounted) {
-            setSession(data.session);
-            setUser(data.session?.user || null);
-            
-            if (data.session) {
-              // Store the new session
-              await SessionManager.storeSession(data.session);
-              
-              if (data.session.user) {
-                await fetchProfile(data.session.user.id);
-              }
-            }
-          }
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error fetching session:", error);
         }
-      } catch (error) {
-        console.error('Error getting initial session:', error);
+        
+        setSession(session);
+      } catch (e) {
+        console.error('Error in session retrieval:', e);
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setIsReady(true);
       }
     };
 
-    getInitialSession();
+    getSession();
 
-    // Set up the auth state listener
-    const { data } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
+      setSession(session);
       
-      if (mounted) {
-        setSession(newSession);
-        setUser(newSession?.user || null);
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Check if user profile exists
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
         
-        if (newSession) {
-          // Store the updated session
-          await SessionManager.storeSession(newSession);
-          
-          if (newSession.user) {
-            await fetchProfile(newSession.user.id);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          // Clear session on sign out
-          await SessionManager.clearSession();
-          setProfile(null);
+        // If no profile exists, create one
+        if (!profile && !error) {
+          await supabase
+            .from('profiles')
+            .insert([{
+              id: session.user.id,
+              status: 'online',
+              created_at: new Date().toISOString()
+            }]);
         }
         
-        // Handle navigation based on auth state
-        if (event === 'SIGNED_IN') {
-          router.replace('/');
-        } else if (event === 'SIGNED_OUT') {
-          router.replace('/login');
-        }
+        // Navigate to main app
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 800);
       }
     });
 
     return () => {
-      mounted = false;
-      data.subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
-  // Fetch the user's profile
-  const fetchProfile = async (userId: string) => {
+  const logout = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-    }
-  };
-
-  // Refresh the profile
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
-  };
-
-  // Sign in with email and password
-  const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      console.log('Attempting to sign in...');
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      
-      // Explicitly store session
-      if (data.session) {
-        await SessionManager.storeSession(data.session);
-        console.log('Session stored after sign in');
-      }
-    } catch (error: any) {
-      console.error('Error signing in:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sign up with email and password
-  const signUp = async (email: string, password: string, username: string) => {
-    try {
-      setLoading(true);
-      console.log('Attempting to sign up...');
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Create a new profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            username,
-            full_name: '',
-            avatar_url: '',
-          });
-
-        if (profileError) throw profileError;
-        
-        // If we got a session, store it
-        if (data.session) {
-          await SessionManager.storeSession(data.session);
-          console.log('Session stored after sign up');
-        }
-      }
-    } catch (error: any) {
-      console.error('Error signing up:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sign out
-  const signOut = async () => {
-    try {
-      setLoading(true);
-      
-      // First, clear local session
-      await SessionManager.clearSession();
-      
-      // Then, sign out from Supabase
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      console.log('Successfully signed out');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    } finally {
-      setLoading(false);
+      if (error) {
+        Alert.alert("Logout Failed", error.message);
+      }
+    } catch (e) {
+      console.error('Error during logout:', e);
     }
   };
 
-  // The value that will be provided to consumers of this context
-  const value = {
-    session,
-    user,
-    profile,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    refreshProfile,
-  };
+  if (!isReady) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color="#0061FF" />
+      </View>
+    );
+  }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  return (
+    <AuthContext.Provider 
+      value={{ 
+        session, 
+        user: session?.user ?? null, 
+        isAuthenticated: !!session?.user,
+        logout 
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-// Create a hook for using the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
-
-export default AuthProvider;
