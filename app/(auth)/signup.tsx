@@ -11,10 +11,11 @@ import {
     ScrollView,
     StatusBar,
     KeyboardAvoidingView,
-    Alert
+    Alert,
+    ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '@/contexts/AuthProvider';
 
@@ -38,9 +39,15 @@ WebBrowser.maybeCompleteAuthSession();
 export default function SignupScreen() {
     useWarmUpBrowser();
     
-    // Use expo-router for navigation
-    const router = useRouter();
-    const { signUp } = useAuth();
+    // Use auth context
+    const { signUp, session, loading: authLoading } = useAuth();
+    
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (session) {
+            router.replace('/(root)');
+        }
+    }, [session]);
     
     // Core state management
     const [currentScreen, setCurrentScreen] = useState('register');
@@ -108,10 +115,7 @@ export default function SignupScreen() {
                 setCurrentScreen('confirmation');
             } catch (error) {
                 console.error('Signup error:', error);
-                Alert.alert(
-                    'Registration Error',
-                    `Error: ${error.message || 'Unknown error'}\nPlease try again or contact support.`
-                );
+                // Alert is now handled in the signUp function in AuthProvider
             } finally {
                 setLoading(false);
             }
@@ -121,6 +125,9 @@ export default function SignupScreen() {
     const handleResendEmail = async () => {
         setLoading(true);
         try {
+            // Use supabase from auth context to avoid importing it directly
+            const { supabase } = await import("@/lib/supabase");
+            
             const { error } = await supabase.auth.resend({
                 type: 'signup',
                 email: email,
@@ -142,6 +149,15 @@ export default function SignupScreen() {
     const getInputStyle = (error) => {
         return error ? "border-danger" : "border-gray-200";
     };
+
+    if (authLoading) {
+        return (
+            <SafeAreaView className="flex-1 bg-white justify-center items-center">
+                <ActivityIndicator size="large" color="#0061FF" />
+                <Text className="mt-4 text-primary-400 font-rubik-medium">Loading...</Text>
+            </SafeAreaView>
+        );
+    }
 
     const renderRegisterScreen = () => (
         <SafeAreaView className="flex-1 bg-white">
@@ -269,9 +285,13 @@ export default function SignupScreen() {
                             testID="register-button"
                             disabled={loading}
                         >
-                            <Text className="text-white text-lg font-rubik-bold tracking-wide">
-                                {loading ? "REGISTERING..." : "REGISTER"}
-                            </Text>
+                            {loading ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text className="text-white text-lg font-rubik-bold tracking-wide">
+                                    REGISTER
+                                </Text>
+                            )}
                         </TouchableOpacity>
                         
                         {/* Login link */}
@@ -326,7 +346,11 @@ export default function SignupScreen() {
                         disabled={loading}
                         accessibilityLabel="Resend email confirmation button"
                     >
-                        <Ionicons name="mail-outline" size={18} color="white" />
+                        {loading ? (
+                            <ActivityIndicator color="white" size="small" style={{ marginRight: 8 }} />
+                        ) : (
+                            <Ionicons name="mail-outline" size={18} color="white" />
+                        )}
                         <Text className="text-white font-rubik-medium ml-2">
                             {loading ? "Sending..." : "Resend email confirmation"}
                         </Text>

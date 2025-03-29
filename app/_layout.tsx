@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { View, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 
 import "./global.css";
 import AuthProvider from "../contexts/AuthProvider";
@@ -13,8 +13,7 @@ import { supabase } from "../lib/supabase";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [initializing, setInitializing] = useState(true);
-  const [initialSession, setInitialSession] = useState(null);
+  const [appIsReady, setAppIsReady] = useState(false);
   
   const [fontsLoaded] = useFonts({
     "Rubik-Bold": require("../assets/fonts/Rubik-Bold.ttf"),
@@ -25,46 +24,48 @@ export default function RootLayout() {
     "Rubik-SemiBold": require("../assets/fonts/Rubik-SemiBold.ttf"),
   });
 
-  // Check initial session
+  // Check if Supabase is initialized
   useEffect(() => {
-    async function checkSession() {
+    async function prepare() {
       try {
+        // Pre-load/check any required resources here
         const { data } = await supabase.auth.getSession();
-        setInitialSession(data.session);
-        console.log("Initial session check:", data.session ? "Session exists" : "No session");
+        console.log("Supabase initialized, session check:", data.session ? "Has session" : "No session");
       } catch (e) {
-        console.error("Error checking session:", e);
+        console.error("Initialization error:", e);
       } finally {
-        setInitializing(false);
+        setAppIsReady(true);
       }
     }
     
-    checkSession();
+    prepare();
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && !initializing) {
-      // This tells the splash screen to hide immediately
+    if (fontsLoaded && appIsReady) {
+      // Hide splash screen once everything is ready
       SplashScreen.hideAsync().catch(() => {
         /* ignore errors */
       });
     }
-  }, [fontsLoaded, initializing]);
+  }, [fontsLoaded, appIsReady]);
 
-  // Prevent rendering until resources are loaded and initial session check is done
-  if (!fontsLoaded || initializing) {
+  // Prevent rendering until resources are loaded
+  if (!fontsLoaded || !appIsReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color="#0061FF" />
+        <Text style={{ marginTop: 10, fontFamily: 'System', fontSize: 16 }}>
+          Loading application...
+        </Text>
       </View>
     );
   }
 
-  // Return the root layout once fonts are loaded
+  // Return the root layout once everything is ready
   return (
     <AuthProvider>
       <Stack screenOptions={{ headerShown: false }}>
-        {/* Define routes at the root level */}
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(root)" options={{ headerShown: false }} />
       </Stack>
