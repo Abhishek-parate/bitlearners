@@ -475,7 +475,7 @@ export default function CreateBudgetPage() {
           <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
             <Text className="font-rubik text-black-100 mb-2">Total Budget</Text>
             <View className="flex-row items-center">
-              <Text className="font-rubik-medium text-black-300 text-xl mr-2">$</Text>
+              <Text className="font-rubik-medium text-black-300 text-xl mr-2">₹</Text>
               <TextInput
                 className="font-rubik-semibold text-black-300 text-3xl flex-1"
                 placeholder="0.00"
@@ -499,7 +499,7 @@ export default function CreateBudgetPage() {
               <Text 
                 className={`font-rubik-medium ${unallocated < 0 ? 'text-danger' : 'text-black-300'}`}
               >
-                ${unallocated.toFixed(2)}
+                ₹{unallocated.toFixed(2)}
               </Text>
             </View>
             {unallocated < 0 && (
@@ -551,7 +551,7 @@ export default function CreateBudgetPage() {
                     <Text className="font-rubik-medium text-black-300">{allocation.category.name}</Text>
                   </View>
                   <View className="flex-row items-center">
-                    <Text className="font-rubik text-black-300 mr-1">$</Text>
+                    <Text className="font-rubik text-black-300 mr-1">₹</Text>
                     <TextInput
                       className="font-rubik text-black-300 w-20 text-right"
                       keyboardType="decimal-pad"

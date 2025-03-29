@@ -318,7 +318,7 @@ export default function AddExpensePage() {
             <View className="mx-4 p-4 bg-white rounded-2xl shadow-sm mb-4">
               <Text className="font-rubik text-black-100 mb-2">Amount</Text>
               <View className="flex-row items-center">
-                <Text className="font-rubik-medium text-black-300 text-xl mr-2">$</Text>
+                <Text className="font-rubik-medium text-black-300 text-xl mr-2">₹</Text>
                 <TextInput
                   className="font-rubik-semibold text-black-300 text-3xl flex-1"
                   placeholder="0.00"

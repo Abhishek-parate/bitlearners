@@ -421,7 +421,7 @@ export default function BudgetDetailPage() {
             <Text className="font-rubik text-black-100">Total Budget</Text>
             {editMode ? (
               <View className="flex-row items-center">
-                <Text className="font-rubik text-black-300 mr-1">$</Text>
+                <Text className="font-rubik text-black-300 mr-1">₹</Text>
                 <TextInput
                   className="font-rubik-medium text-black-300 w-20 text-right"
                   keyboardType="decimal-pad"
@@ -563,7 +563,7 @@ export default function BudgetDetailPage() {
                       {editMode ? (
                         <View className="flex-row items-center mt-2">
                           <View className="flex-row items-center mr-3">
-                            <Text className="font-rubik text-black-300 mr-1">$</Text>
+                            <Text className="font-rubik text-black-300 mr-1">₹</Text>
                             <TextInput
                               className="font-rubik text-black-300 w-16 text-right"
                               keyboardType="decimal-pad"
@@ -737,7 +737,7 @@ export default function BudgetDetailPage() {
             {/* Amount Input */}
             <Text className="font-rubik text-black-100 mb-2">Amount</Text>
             <View className="flex-row items-center bg-accent-100 p-4 rounded-2xl mb-6">
-              <Text className="font-rubik-medium text-black-300 mr-2">$</Text>
+              <Text className="font-rubik-medium text-black-300 mr-2">₹</Text>
               <TextInput
                 className="font-rubik-medium text-black-300 flex-1"
                 placeholder="0.00"

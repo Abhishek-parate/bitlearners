@@ -329,7 +329,7 @@ export default function SavingsGoalsPage() {
             <View className="mb-4">
               <Text className="font-rubik text-black-100 mb-2">Target Amount</Text>
               <View className="flex-row items-center bg-accent-100 p-3 rounded-xl">
-                <Text className="font-rubik text-black-300 mr-2">$</Text>
+                <Text className="font-rubik text-black-300 mr-2">₹</Text>
                 <TextInput
                   className="font-rubik text-black-300 flex-1"
                   placeholder="0.00"
@@ -343,7 +343,7 @@ export default function SavingsGoalsPage() {
             <View className="mb-4">
               <Text className="font-rubik text-black-100 mb-2">Current Amount (Optional)</Text>
               <View className="flex-row items-center bg-accent-100 p-3 rounded-xl">
-                <Text className="font-rubik text-black-300 mr-2">$</Text>
+                <Text className="font-rubik text-black-300 mr-2">₹</Text>
                 <TextInput
                   className="font-rubik text-black-300 flex-1"
                   placeholder="0.00"
