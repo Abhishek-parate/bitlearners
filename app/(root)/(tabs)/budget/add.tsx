@@ -467,7 +467,7 @@ export default function CreateBudgetPage() {
           {totalIncome > 0 && (
             <View className="mx-4 mb-4 bg-white p-4 rounded-2xl">
               <Text className="font-rubik text-black-100 mb-1">Monthly Income</Text>
-              <Text className="font-rubik-semibold text-green-500">${totalIncome.toFixed(2)}</Text>
+              <Text className="font-rubik-semibold text-green-500">₹{totalIncome.toFixed(2)}</Text>
             </View>
           )}
 
