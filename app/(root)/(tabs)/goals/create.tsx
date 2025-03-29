@@ -408,7 +408,7 @@ export default function SavingsGoalsPage() {
                 
                 <View className="mb-2">
                   <View className="flex-row justify-between items-center mb-1">
-                    <Text className="font-rubik text-black-100">Target: ${goal.target_amount.toFixed(2)}</Text>
+                    <Text className="font-rubik text-black-100">Target: ₹{goal.target_amount.toFixed(2)}</Text>
                     <Text className="font-rubik text-primary-300">{getTimeRemaining(goal.deadline)}</Text>
                   </View>
                   
@@ -421,7 +421,7 @@ export default function SavingsGoalsPage() {
                   
                   <View className="flex-row justify-between">
                     <Text className="font-rubik text-black-100">
-                      ${goal.current_amount.toFixed(2)} saved
+                    ₹{goal.current_amount.toFixed(2)} saved
                     </Text>
                     <Text className="font-rubik-medium text-black-300">
                       {Math.round(calculateProgress(goal.current_amount, goal.target_amount))}%
@@ -431,7 +431,7 @@ export default function SavingsGoalsPage() {
                 
                 <View className="mt-3 pt-3 border-t border-accent-100">
                   <Text className="font-rubik text-black-100 mb-2">
-                    Save ${calculateDailyAmount(goal)} daily to reach your goal
+                    Save ₹{calculateDailyAmount(goal)} daily to reach your goal
                   </Text>
                   
                   <View className="mb-4">
@@ -459,7 +459,7 @@ export default function SavingsGoalsPage() {
                         thumbTintColor="#0061FF"
                       />
                       <Text className="font-rubik-medium text-black-300 w-16 text-right">
-                        ${Math.round(goal.current_amount)}
+                      ₹{Math.round(goal.current_amount)}
                       </Text>
                     </View>
                   </View>
@@ -517,7 +517,7 @@ export default function SavingsGoalsPage() {
                 {tip.potentialSavings && (
                   <View className="mt-2 bg-green-100 p-2 rounded-lg">
                     <Text className="font-rubik-medium text-green-700 text-center">
-                      Potential Savings: ${tip.potentialSavings.toFixed(2)}
+                      Potential Savings: ₹{tip.potentialSavings.toFixed(2)}
                     </Text>
                   </View>
                 )}
