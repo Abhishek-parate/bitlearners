@@ -198,7 +198,7 @@ const displayName = getDisplayName();  const screenWidth = Dimensions.get('windo
         // Get budget details for each budget
         const budgetDetailsPromises = budgets.map(budget => 
           getBudgetDetails(budget.id).catch(err => {
-            console.error(`Failed to get details for budget ${budget.id}:`, err);
+            console.error(`Failed to get details for budget ₹{budget.id}:`, err);
             return { id: budget.id, budget_allocations: [] }; // Return fallback on error
           })
         );
@@ -226,25 +226,25 @@ const displayName = getDisplayName();  const screenWidth = Dimensions.get('windo
         // Process categories with spending info
   // Process categories with spending info
 const categoriesWithSpending = categories.map((category, index) => {
-  console.log(`Processing category: ${category.name}, ID: ${category.id}`);
+  console.log(`Processing category: ₹{category.name}, ID: ₹{category.id}`);
   
   // Sum allocations across all budgets for this category
   let totalAllocation = 0;
   
   budgetDetailsResults.forEach(budgetDetail => {
-    console.log(`Checking budget: ${budgetDetail.id}`);
+    console.log(`Checking budget: ₹{budgetDetail.id}`);
     const allocations = Array.isArray(budgetDetail.budget_allocations) 
       ? budgetDetail.budget_allocations 
       : [];
       
-    console.log(`Found ${allocations.length} allocations`);
+    console.log(`Found ₹{allocations.length} allocations`);
     
     const categoryAllocation = allocations.find(
       alloc => alloc.category_id === category.id
     );
     
     if (categoryAllocation && !isNaN(Number(categoryAllocation.amount))) {
-      console.log(`Found allocation: ${categoryAllocation.amount} for ${category.name}`);
+      console.log(`Found allocation: ₹{categoryAllocation.amount} for ₹{category.name}`);
       totalAllocation += Number(categoryAllocation.amount);
     }
   });
@@ -253,7 +253,7 @@ const categoriesWithSpending = categories.map((category, index) => {
   const categoryExpenses = expenses.filter(expense => {
     const matches = expense.category_id === category.id;
     if (matches) {
-      console.log(`Found expense: ${expense.amount} for ${category.name}`);
+      console.log(`Found expense: ₹{expense.amount} for ₹{category.name}`);
     }
     return matches;
   });
@@ -263,7 +263,7 @@ const categoriesWithSpending = categories.map((category, index) => {
     return sum + amount;
   }, 0);
   
-  console.log(`Category ${category.name}: spent=${categorySpent}, limit=${totalAllocation}`);
+  console.log(`Category ₹{category.name}: spent=₹{categorySpent}, limit=₹{totalAllocation}`);
   
   return {
     id: category.id,
@@ -281,7 +281,7 @@ const validCategories = categoriesWithSpending.filter(cat =>
   cat.name && cat.id
 );
 
-console.log(`Found ${validCategories.length} valid categories`);
+console.log(`Found ₹{validCategories.length} valid categories`);
 setCategories(validCategories);
         // Prepare pie chart data for category distribution
         const pieChartData = validCategories
@@ -322,7 +322,7 @@ setCategories(validCategories);
           }
           
           return {
-            id: expense.id || `expense-${Math.random()}`,
+            id: expense.id || `expense-₹{Math.random()}`,
             description: expense.description || 'Unlabeled Expense',
             amount: Number(expense.amount) || 0,
             created_at: expense.date || expense.created_at || new Date().toISOString(),
@@ -469,22 +469,22 @@ setCategories(validCategories);
           <View className="h-4 bg-primary-100 rounded-full w-full mb-2">
             <View 
               className="h-4 bg-primary-300 rounded-full" 
-              style={{ width: `${budgetSummary.percentageSpent}%` }} 
+              style={{ width: `₹{budgetSummary.percentageSpent}%` }} 
             />
           </View>
           
           <View className="flex-row justify-between">
             <View>
               <Text className="font-rubik text-black-100">Spent</Text>
-              <Text className="font-rubik-bold text-black-300">${budgetSummary.spent.toFixed(2)}</Text>
+              <Text className="font-rubik-bold text-black-300">₹{budgetSummary.spent.toFixed(2)}</Text>
             </View>
             <View>
               <Text className="font-rubik text-black-100">Remaining</Text>
-              <Text className="font-rubik-bold text-primary-300">${budgetSummary.remaining.toFixed(2)}</Text>
+              <Text className="font-rubik-bold text-primary-300">₹{budgetSummary.remaining.toFixed(2)}</Text>
             </View>
             <View>
               <Text className="font-rubik text-black-100">Total</Text>
-              <Text className="font-rubik-bold text-black-300">${budgetSummary.totalBudget.toFixed(2)}</Text>
+              <Text className="font-rubik-bold text-black-300">₹{budgetSummary.totalBudget.toFixed(2)}</Text>
             </View>
           </View>
         </View>
@@ -493,14 +493,14 @@ setCategories(validCategories);
         <View className="mx-4 flex-row justify-between mb-4">
           <View className="bg-white p-3 rounded-2xl shadow-sm w-[48%]">
             <Text className="font-rubik text-black-100 mb-1">Monthly Income</Text>
-            <Text className="font-rubik-bold text-green-700 text-xl">${incomeSummary.totalIncome.toFixed(2)}</Text>
+            <Text className="font-rubik-bold text-green-700 text-xl">₹{incomeSummary.totalIncome.toFixed(2)}</Text>
           </View>
           <View className="bg-white p-3 rounded-2xl shadow-sm w-[48%]">
             <Text className="font-rubik text-black-100 mb-1">Net Savings</Text>
             <Text 
-              className={`font-rubik-bold text-xl ${incomeSummary.netSavings >= 0 ? 'text-green-700' : 'text-danger'}`}
+              className={`font-rubik-bold text-xl ₹{incomeSummary.netSavings >= 0 ? 'text-green-700' : 'text-danger'}`}
             >
-              ${incomeSummary.netSavings.toFixed(2)}
+              ₹{incomeSummary.netSavings.toFixed(2)}
             </Text>
           </View>
         </View>
@@ -581,7 +581,7 @@ setCategories(validCategories);
                 backgroundColor: 'white',
                 backgroundGradientFrom: 'white',
                 backgroundGradientTo: 'white',
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                color: (opacity = 1) => `rgba(0, 0, 0, ₹{opacity})`,
               }}
               accessor="value"
               backgroundColor="transparent"
@@ -604,18 +604,18 @@ setCategories(validCategories);
               <View 
                 className="h-4 bg-green-500 rounded-full" 
                 style={{ 
-                  width: `${Math.min((savingsGoal.current_amount / savingsGoal.target_amount) * 100, 100)}%` 
+                  width: `₹{Math.min((savingsGoal.current_amount / savingsGoal.target_amount) * 100, 100)}%` 
                 }} 
               />
             </View>
             <View className="flex-row justify-between">
               <View>
                 <Text className="font-rubik text-black-100">Saved</Text>
-                <Text className="font-rubik-bold text-black-300">${savingsGoal.current_amount.toFixed(2)}</Text>
+                <Text className="font-rubik-bold text-black-300">₹{savingsGoal.current_amount.toFixed(2)}</Text>
               </View>
               <View>
                 <Text className="font-rubik text-black-100">Target</Text>
-                <Text className="font-rubik-bold text-primary-300">${savingsGoal.target_amount.toFixed(2)}</Text>
+                <Text className="font-rubik-bold text-primary-300">₹{savingsGoal.target_amount.toFixed(2)}</Text>
               </View>
               <View>
                 <Text className="font-rubik text-black-100">Progress</Text>
@@ -643,7 +643,7 @@ setCategories(validCategories);
             <Text className="font-rubik text-black-300">{category.name}</Text>
           </View>
           <Text className="font-rubik-medium text-black-300">
-            ${(category.spent || 0).toFixed(2)} / ${(category.limit || 0).toFixed(2)}
+            ₹{(category.spent || 0).toFixed(2)} / ₹{(category.limit || 0).toFixed(2)}
           </Text>
         </View>
         
@@ -652,7 +652,7 @@ setCategories(validCategories);
           <View 
             className="h-2 rounded-full" 
             style={{ 
-              width: `${Math.min(((category.spent || 0) / (category.limit || 1)) * 100, 100)}%`,
+              width: `₹{Math.min(((category.spent || 0) / (category.limit || 1)) * 100, 100)}%`,
               backgroundColor: category.color || '#0061FF'
             }} 
           />
@@ -701,7 +701,7 @@ setCategories(validCategories);
                     </Text>
                   </View>
                 </View>
-                <Text className="font-rubik-bold text-danger">-${transaction.amount.toFixed(2)}</Text>
+                <Text className="font-rubik-bold text-danger">-₹{transaction.amount.toFixed(2)}</Text>
               </View>
             ))
           ) : (
