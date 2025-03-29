@@ -22,6 +22,7 @@ import {
   clearSession, 
   supabase 
 } from '@/lib/supabase';
+import { router } from 'expo-router';
 
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
@@ -224,7 +225,7 @@ export default function ProfilePage() {
             <View className="bg-primary-100 p-3 rounded-xl items-center w-[48%]">
               <Text className="font-rubik text-black-100 mb-1">Monthly Budget</Text>
               <Text className="font-rubik-bold text-primary-300 text-lg">
-                ${profile?.budget_limit?.toFixed(2) || '0.00'}
+              ₹{profile?.budget_limit?.toFixed(2) || '0.00'}
               </Text>
             </View>
             
@@ -235,10 +236,14 @@ export default function ProfilePage() {
           </View>
           
           <TouchableOpacity 
-            className="bg-primary-300 p-3 rounded-xl"
+            className="bg-primary-300 p-3 rounded-xl font-rubik-medium text-white text-center"
+            onPress={() => router.push('/(root)/(tabs)/reports')}
+
           >
-            <Text className="font-rubik-medium text-white text-center">View Financial Reports</Text>
+           View Financial Reports
           </TouchableOpacity>
+
+          
         </View>
         
         {/* Settings */}
