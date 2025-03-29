@@ -518,7 +518,7 @@ export default function TransactionReportPage() {
                     <Text className="font-rubik-medium text-black-300">{category.name}</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="font-rubik-medium text-black-300">${category.amount.toFixed(2)}</Text>
+                    <Text className="font-rubik-medium text-black-300">₹{category.amount.toFixed(2)}</Text>
                     <Text className="font-rubik text-black-100 text-xs">{getPercentage(category.amount)}%</Text>
                   </View>
                 </View>
